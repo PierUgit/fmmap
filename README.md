@@ -5,7 +5,7 @@
 These routines provide *some* of the features of the posix/C memory mapped files with a Fortran interface.
 
 2 usages:
-- allocating arrays that are potentially bigger the RAM+swap size, and are which are backed in a temporary file (anonymous mapping)
+- allocating arrays that are potentially bigger the RAM+swap size, and which are backed in a temporary file (anonymous mapping)
 - opening existing files or creating new files, and mapping them to an array
 
 ## Usage
@@ -74,6 +74,6 @@ call fmmap_destroy(pr)
 
 ## Limitations
 
-- The The intrinsic type version of `ffmap_create()` and `ffmap_destroy()` are not thread-safe. 
+- The intrinsic type versions of `ffmap_create()` and `ffmap_destroy()` are not thread-safe. 
 - The current version is based on the availability of C Posix routines, and won't compile on Windows.
 - Mapping to an array of a derived type containing allocatable or pointer components is not allowed. 
