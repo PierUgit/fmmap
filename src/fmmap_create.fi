@@ -1,0 +1,79 @@
+   integer(fmmap_size), intent(in)          :: sh(:) 
+      !! shape of the pointer
+      !! - FILE_SCRATCH and FILE_NEW
+      !!   - the size of `sh` must be equal to the rank of `p`
+      !! - FILE_OLD
+      !!   - the size of `sh` must be equal to the rank of `p` minus 1
+      !!   - the size of the last dimension of `p` is determined from the file size
+   integer,             intent(in)           :: filemode 
+      !! FILE_SCRATCH, FILE_OLD, or FILE_NEW
+   character(*),        intent(in), optional :: filename !! file name
+      !! FILE_OLD or FILE_new: required name of the file
+      !! FILE_SCRATCH: not required; if present:
+      !!  - a processor dependent unique suffix will be appended
+      !!  - can be a directory; in this case the trailing directory separator must be present,
+      !!    e.g. `"/tmp/"` rather than "`/tmp`"
+   integer(fmmap_size), intent(in), optional :: lbound(:)
+      !! lower bounds of the output pointer;
+      !! the size of `lbound` must be equal to the rank of `p`
+      
+   integer, parameter :: ss = storage_size(p)
+   type(fmmap_t) :: x
+   integer(fmmap_size) :: nbytes, n
+   integer(fmmap_size), allocatable :: sh___(:), lb(:), ub(:)
+   !********************************************************************************************
+   
+   if (rank(p) < 1 .or. rank(p) > 7) error stop msg0//msg1
+   if (filemode == FMMAP_OLD) then
+      if (size(sh) /= rank(p)-1) error stop msg0//msg2
+   else
+      if (size(sh) /= rank(p)  ) error stop msg0//msg2
+      nbytes = fmmap_nbytes( product(sh), ss )
+   end if
+      
+   call fmmap_create(x,nbytes,filemode,filename)
+
+   if (filemode == FMMAP_OLD) then
+      n = fmmap_nelems(nbytes, ss )
+      sh___ = [ sh, n / product(sh) ]
+      if (sh___(rank(p)) * product(sh) /= n) error stop msg0//msg3 
+   else
+      sh___ = sh      
+   end if
+   allocate( lb(rank(p)), source=1_fmmap_size )
+   if (present(lbound)) lb = lbound
+   ub = lb + sh___ - 1
+   
+   call c_f_pointer( x%cptr, q, [product(sh___)] )
+   select rank(p)
+      rank(1) ; p( lb(1):ub(1) ) => q
+      rank(2) ; p( lb(1):ub(1) &
+                 , lb(2):ub(2) ) => q
+      rank(3) ; p( lb(1):ub(1) &
+                 , lb(2):ub(2) &
+                 , lb(3):ub(3) ) => q
+      rank(4) ; p( lb(1):ub(1) &
+                 , lb(2):ub(2) &
+                 , lb(3):ub(3) &
+                 , lb(4):ub(4) ) => q
+      rank(5) ; p( lb(1):ub(1) &
+                 , lb(2):ub(2) &
+                 , lb(3):ub(3) &
+                 , lb(4):ub(4) &
+                 , lb(5):ub(5) ) => q
+      rank(6) ; p( lb(1):ub(1) &
+                 , lb(2):ub(2) &
+                 , lb(3):ub(3) &
+                 , lb(4):ub(4) &
+                 , lb(5):ub(5) &
+                 , lb(6):ub(6) ) => q
+      rank(7) ; p( lb(1):ub(1) &
+                 , lb(2):ub(2) &
+                 , lb(3):ub(3) &
+                 , lb(4):ub(4) &
+                 , lb(5):ub(5) &
+                 , lb(6):ub(6) &
+                 , lb(7):ub(7) ) => q
+   end select
+   
+   call fmmap_table_push(x)

@@ -1,0 +1,14 @@
+   type(fmmap_t) :: x
+   !********************************************************************************************  
+
+   call fmmap_table_pull(x,c_loc(p))
+   call fmmap_destroy_cptr(x)
+   select rank(p)
+      rank(1) ; p => null()
+      rank(2) ; p => null()
+      rank(3) ; p => null()
+      rank(4) ; p => null()
+      rank(5) ; p => null()
+      rank(6) ; p => null()
+      rank(7) ; p => null()
+   end select
