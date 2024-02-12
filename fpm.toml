@@ -1,6 +1,6 @@
 name = "fmmap"
-version = "0.1.0"
-license = "license"
+version = "0.1.1"
+license = "GPL 3"
 author = "PierUgit"
 maintainer = "PierUgit"
 copyright = "Copyright 2024, PierUgit"

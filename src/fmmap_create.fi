@@ -17,7 +17,7 @@
       !! lower bounds of the output pointer;
       !! the size of `lbound` must be equal to the rank of `p`
       
-   integer, parameter :: ss = storage_size(p)
+   integer, parameter :: ss = storage_size(q)
    type(fmmap_t) :: x
    integer(fmmap_size) :: nbytes, n
    integer(fmmap_size), allocatable :: sh___(:), lb(:), ub(:)

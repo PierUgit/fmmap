@@ -32,9 +32,12 @@ call fmmap_create(pi3,[n,n/2],FMMAP_OLD,"./fun1.bin")
 print*, shape(pi3), pi3(1,1,1), pi3(n,n/2,2)
 call fmmap_destroy(pi3)
 
+n = 10_fmmap_size ** 8
 nbytes = fmmap_nbytes(n,storage_size(pt))
+print*, "creating scratch mapping of", nbytes," bytes"
 call fmmap_create(x,nbytes,FMMAP_SCRATCH,"./")
 call c_f_pointer(x%cptr, pt, [n])
+print*, "filling the array"
 call random_number( pt(:)%a )
 pt(:)%i = [(i, i=1,n)]
 pt(:)%str = "Hello"

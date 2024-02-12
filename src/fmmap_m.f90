@@ -344,11 +344,7 @@ contains
    !********************************************************************************************
    integer, pointer :: p(..)   ! the pointer associated to the mapping to destroy
 
-   type(fmmap_t) :: x
-   !********************************************************************************************
-   call fmmap_table_pull(x,c_loc(p))
-   call fmmap_destroy_cptr(x)
-   !p => null()
+   include "fmmap_destroy.fi"
    
    end subroutine fmmap_destroy_integer
    
