@@ -62,6 +62,7 @@ implicit none
    
    !> Generic routine name that creates either a generic mapping to a C pointer or a mapping
    !> to array pointers of some selected intrinsic types/kinds.
+   !> This routine is not thread safe !
    interface fmmap_create
       module procedure fmmap_create_cptr
       module procedure fmmap_create_real,    fmmap_create_dp
@@ -70,6 +71,7 @@ implicit none
    end interface
    
    !> Generic routine name that destroys an existing mapping
+   !> This routine is not thread safe !
    interface fmmap_destroy
       module procedure fmmap_destroy_cptr
       module procedure fmmap_destroy_real,    fmmap_destroy_dp
@@ -210,6 +212,7 @@ contains
    subroutine fmmap_create_real(p,sh,filemode,filename,lbound)
    !********************************************************************************************
    !! Creates a mapping to a `real` pointer `p`
+   !! This routine is not thread safe !
    !********************************************************************************************
    real, pointer :: p(..)   ! on output, `p` points to the mapped file
    real, pointer :: q(:)
@@ -223,6 +226,7 @@ contains
    subroutine fmmap_create_dp(p,sh,filemode,filename,lbound)
    !********************************************************************************************
    !! Creates a mapping to a `double precision` pointer `p`
+   !! This routine is not thread safe !
    !********************************************************************************************
    double precision, pointer :: p(..)   ! on output, `p` points to the mapped file
    double precision, pointer :: q(:)
@@ -236,6 +240,7 @@ contains
    subroutine fmmap_create_complex(p,sh,filemode,filename,lbound)
    !********************************************************************************************
    !! Creates a mapping to a `complex` pointer `p`
+   !! This routine is not thread safe !
    !********************************************************************************************
    complex, pointer :: p(..)   ! on output, `p` points to the mapped file
    complex, pointer :: q(:)
@@ -249,6 +254,7 @@ contains
    subroutine fmmap_create_dc(p,sh,filemode,filename,lbound)
    !********************************************************************************************
    !! Creates a mapping to a `double complex` pointer `p`
+   !! This routine is not thread safe !
    !********************************************************************************************
    complex(kind=kind(0d0)), pointer :: p(..)   ! on output, `p` points to the mapped file
    complex(kind=kind(0d0)), pointer :: q(:)
@@ -262,6 +268,7 @@ contains
    subroutine fmmap_create_integer(p,sh,filemode,filename,lbound)
    !********************************************************************************************
    !! Creates a mapping to a `integer` pointer `p`
+   !! This routine is not thread safe !
    !********************************************************************************************
    integer, pointer :: p(..)   ! on output, `p` points to the mapped file
    integer, pointer :: q(:)
@@ -275,6 +282,7 @@ contains
    subroutine fmmap_create_di(p,sh,filemode,filename,lbound)
    !********************************************************************************************
    !! Creates a mapping to a `integer(kind=fmmap_bigint)` pointer `p`
+   !! This routine is not thread safe !
    !********************************************************************************************
    integer(kind=fmmap_bigint), pointer :: p(..)   ! on output, `p` points to the mapped file
    integer(kind=fmmap_bigint), pointer :: q(:)
@@ -289,6 +297,7 @@ contains
    !********************************************************************************************
    !! Destroys a mapping to a `real` pointer
    !! (the file is unmapped and closed, and the pointer is nullified)
+   !! This routine is not thread safe !
    !********************************************************************************************
    real, pointer :: p(..)   ! the pointer associated to the mapping to destroy
 
@@ -302,6 +311,7 @@ contains
    !********************************************************************************************
    !! Destroys a mapping to a `double precision` pointer
    !! (the file is unmapped and closed, and the pointer is nullified)
+   !! This routine is not thread safe !
    !********************************************************************************************
    double precision, pointer :: p(..)   ! the pointer associated to the mapping to destroy
 
@@ -315,6 +325,7 @@ contains
    !********************************************************************************************
    !! Destroys a mapping to a `complex` pointer
    !! (the file is unmapped and closed, and the pointer is nullified)
+   !! This routine is not thread safe !
    !********************************************************************************************
    complex, pointer :: p(..)   ! the pointer associated to the mapping to destroy
 
@@ -328,6 +339,7 @@ contains
    !********************************************************************************************
    !! Destroys a mapping to a `double complex` pointer
    !! (the file is unmapped and closed, and the pointer is nullified)
+   !! This routine is not thread safe !
    !********************************************************************************************
    complex(kind=kind(0d0)), pointer :: p(..)   ! the pointer associated to the mapping to destroy
 
@@ -341,6 +353,7 @@ contains
    !********************************************************************************************
    !! Destroys a mapping to a `integer` pointer
    !! (the file is unmapped and closed, and the pointer is nullified)
+   !! This routine is not thread safe !
    !********************************************************************************************
    integer, pointer :: p(..)   ! the pointer associated to the mapping to destroy
 
@@ -354,6 +367,7 @@ contains
    !********************************************************************************************
    !! Destroys a mapping to a `integer(kind=fmmap_bigint)` pointer
    !! (the file is unmapped and closed, and the pointer is nullified)
+   !! This routine is not thread safe !
    !********************************************************************************************
    integer(kind=fmmap_bigint), pointer :: p(..)   ! the pointer associated to the mapping to destroy
 
