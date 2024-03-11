@@ -42,14 +42,16 @@ int c_mmap_create( void** ptr
                  , const char* filename 
                  , FILEHANDLE fd) {
 	
-#ifdef POSIX
     int stat;
+    
+#ifdef POSIX
     if (filemode == 1) {
         char path[MAX_PATH];
 		if (strlen(filename) == 0) {
-            strcpy(path,".");
+            strcpy(path,"./");
         } else {
             strcpy(path,filename);
+            strcat(path,"/");
         }
         strcat(path,"fmm.tmpXXXXXX");
         char name[strlen(path)];
@@ -58,8 +60,7 @@ int c_mmap_create( void** ptr
         stat = unlink(name);       if (stat != 0) return 2;
         stat = ftruncate(*fd, n);  if (stat != 0) return 3;
     } else {
-        *fd = open(filename,O_RDWR);
-        if (*fd < 0) return 4;
+        *fd = open(filename,O_RDWR); if (*fd < 0) return 4;
     }
     // Map the file into memory
     *ptr = mmap ( NULL                        
@@ -72,7 +73,6 @@ int c_mmap_create( void** ptr
 #endif
 
 #ifdef WIN32
-	int stat;
 	HANDLE hm;
     if (filemode == 1) {
         char path[MAX_PATH], tmpname[MAX_PATH];
@@ -92,11 +92,11 @@ int c_mmap_create( void** ptr
 		stat = fclose(*fd);                               if (stat != 0)   return 4;
   		*fd = CreateFileA(name,GENERIC_READ | GENERIC_WRITE,0,NULL,OPEN_EXISTING
                          ,FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE, NULL);
-		if (*fd == NULL) return 5;
+		                                                  if (*fd == NULL) return 5;
 	} else {
 		*fd = fopen(filename,"rb+");
 	}
-	hm = CreateFileMappingA(*fd,NULL,PAGE_READWRITE,0,0,NULL); if (hm == NULL) return 7;
+	hm = CreateFileMappingA(*fd,NULL,PAGE_READWRITE,0,0,NULL); if (hm == NULL)   return 7;
 	*ptr = MapViewOfFile(hm,FILE_MAP_ALL_ACCESS,0,0,0);        if (*ptr == NULL) return 8;
 #endif
 
@@ -109,20 +109,17 @@ int c_mmap_destroy( void* ptr
                   , FILEHANDLE fd) {
 
     int stat;
+    
 #ifdef POSIX
-    stat = munmap(ptr, (size_t)n);
-    if (stat != 0) return 11;
-    stat = close(fd);
-    if (stat != 0) return 12;
-    return 0;
+    stat = munmap(ptr, (size_t)n); if (stat != 0) return 11;
+    stat = close(fd);              if (stat != 0) return 12;
 #endif
 
 #ifdef WIN32
     stat = (int)FlushViewOfFile(ptr,0); if (stat == 0) return 11;
-    stat = (int)UnmapViewOfFile(ptr); if (stat == 0) return 12;
+    stat = (int)UnmapViewOfFile(ptr);   if (stat == 0) return 12;
 	// should we destroy the file mapping ? Probably...
-	stat = (int)CloseHandle(fd); if (stat == 0) return 13;
-	// see also DeleteFileA(), GetTempFileName() and GetTempPath()
+	stat = (int)CloseHandle(fd);        if (stat == 0) return 13;
 #endif
 
 	return 0;
