@@ -1,9 +1,11 @@
 #ifdef POSIX
-FILEDES integer(c_int)
+#define FILEDES integer(c_int)
+#define NOFILE -1
 #endif
 
 #ifdef WIN32
-FILEDES type(*)
+#define FILEDES type(c_ptr)
+#define NOFILE c_null_ptr
 #endif
 
 !***********************************************************************************************
@@ -31,7 +33,7 @@ implicit none
    type fmmap_t   ! descriptor
       private
       type(c_ptr), public :: cptr = c_null_ptr
-      integer(c_int)      :: cfd  = -1
+      FILEDES             :: cfd  = NOFILE
       integer(fmmap_size) :: cn   = 0
       logical             :: used = .false.
    end type
@@ -63,7 +65,7 @@ implicit none
          import :: c_ptr, c_int, c_long_long
          type(c_ptr),          value :: cp
          integer(c_long_long), value :: n
-         integer(c_int),       value :: cfd
+         FILEDES,              value :: cfd
       end function c_mmap_destroy
       
    end interface
@@ -143,7 +145,7 @@ contains
    character(kind=c_char,len=:), allocatable :: c_filename
    character(128) :: msg
    !********************************************************************************************
-   
+
    if (file_storage_size /= bitsperbyte) then
       error stop "*** fmmap_init: the file storage unit is not a byte"
    end if

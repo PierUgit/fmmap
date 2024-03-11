@@ -9,7 +9,7 @@
 
 #ifdef POSIX
 #include <sys/mman.h>
-#define FILEHANDLE *int
+#define FILEHANDLE int*
 #endif
 
 #ifdef WIN32
@@ -17,7 +17,7 @@
 #include <WinDef.h>
 #include <WinNT.h>
 #include <winbase.h>
-#define FILEHANDLE HANDLE
+#define FILEHANDLE HANDLE*
 #endif
 
 /*
@@ -41,7 +41,7 @@ int c_mmap_create( void** ptr
                  , const int filemode   
                  , const char* filename 
                  , FILEHANDLE fd ) {
-
+	
 #ifdef POSIX
     int stat;
     if (filemode == 1) {
@@ -63,31 +63,34 @@ int c_mmap_create( void** ptr
                 , *fd                         
                 , 0 );
     if (ptr == MAP_FAILED) return 5;
-    return 0;
 #endif
 
 #ifdef WIN32
+	int stat;
 	HANDLE hm;
     if (filemode == 1) {
 		char name[6];
 		strcpy(name,"abcde");
-		fd = fopen(name,"wb");
-		fseek(fd, n, SEEK_SET);
-		fwrite(0,1,1,fd);
-		fclose(fd);
-		fd = fopen(name,"rwb");
+		*fd = fopen(name,"wb+");                          if (*fd == NULL) return 100;
+		stat = _fseeki64(*fd, (__int64)(n-1), SEEK_SET);  if (stat != 0)   return 101;
+		char foo = 0; 
+		stat = (int)fwrite(&foo,(size_t)1,(size_t)1,*fd); if (stat == 0)   return 102;
+		stat = fclose(*fd);                               if (stat != 0)   return 103;
+  		*fd = CreateFileA(name,GENERIC_READ | GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL);
+		if (*fd == NULL) return 104;
 	} else {
-		fd = fopen(filename,"rwb");
+		*fd = fopen(filename,"rb+");
 	}
-	hm = CreateFileMapping(fd,NULL,PAGE_READWRITE,0,0,NULL);
-	*ptr = hm;
-		
+	hm = CreateFileMappingA(*fd,NULL,PAGE_READWRITE,0,0,NULL); if (hm == NULL) return 5;
+	*ptr = MapViewOfFile(hm,FILE_MAP_ALL_ACCESS,0,0,0);        if (*ptr == NULL) return 6;
 #endif
+
+    return 0;
 }
 
 int c_mmap_destroy( void* ptr
                   , const long long n
-                  , int fd ) {
+                  , FILEHANDLE fd ) {
 
 #ifdef POSIX
     int stat = munmap(ptr, (size_t)n);
@@ -98,6 +101,12 @@ int c_mmap_destroy( void* ptr
 #endif
 
 #ifdef WIN32
+	int stat = (int)FlushViewOfFile(ptr,0); if (stat == 0) return 10;
+    stat = (int)UnmapViewOfFile(ptr); if (stat == 0) return 11;
+	// should we destroy the file mapping ? Probably...
+	stat = (int)CloseHandle(fd); ; if (stat == 0) return 12;
+	// see also DeleteFileA(), GetTempFileName() and GetTempPath()
 #endif
 
+	return 0;
 }

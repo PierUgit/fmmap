@@ -23,6 +23,7 @@
    integer(fmmap_size), allocatable :: sh___(:), lb(:), ub(:)
    !********************************************************************************************
    
+   print*, sh
    if (rank(p) < 1 .or. rank(p) > 7) error stop msg0//msg1
    if (filemode == FMMAP_OLD) then
       if (size(sh) /= rank(p)-1) error stop msg0//msg2
