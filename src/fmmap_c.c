@@ -1,12 +1,24 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/mman.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
+
+#ifdef POSIX
+#include <sys/mman.h>
+#define FILEHANDLE *int
+#endif
+
+#ifdef WIN32
+#include <BaseTsd.h>
+#include <WinDef.h>
+#include <WinNT.h>
+#include <winbase.h>
+#define FILEHANDLE HANDLE
+#endif
 
 /*
 filemode = 1: scratch file
@@ -28,8 +40,9 @@ int c_mmap_create( void** ptr
                  , const long long n    
                  , const int filemode   
                  , const char* filename 
-                 , int* fd ) {
+                 , FILEHANDLE fd ) {
 
+#ifdef POSIX
     int stat;
     if (filemode == 1) {
         char name[strlen(filename)+6];
@@ -51,15 +64,40 @@ int c_mmap_create( void** ptr
                 , 0 );
     if (ptr == MAP_FAILED) return 5;
     return 0;
+#endif
+
+#ifdef WIN32
+	HANDLE hm;
+    if (filemode == 1) {
+		char name[6];
+		strcpy(name,"abcde");
+		fd = fopen(name,"wb");
+		fseek(fd, n, SEEK_SET);
+		fwrite(0,1,1,fd);
+		fclose(fd);
+		fd = fopen(name,"rwb");
+	} else {
+		fd = fopen(filename,"rwb");
+	}
+	hm = CreateFileMapping(fd,NULL,PAGE_READWRITE,0,0,NULL);
+	*ptr = hm;
+		
+#endif
 }
 
 int c_mmap_destroy( void* ptr
                   , const long long n
                   , int fd ) {
 
+#ifdef POSIX
     int stat = munmap(ptr, (size_t)n);
     if (stat != 0) return 11;
     stat = close(fd);
     if (stat != 0) return 12;
     return 0;
+#endif
+
+#ifdef WIN32
+#endif
+
 }

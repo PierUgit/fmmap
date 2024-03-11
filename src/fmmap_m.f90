@@ -1,3 +1,11 @@
+#ifdef POSIX
+FILEDES integer(c_int)
+#endif
+
+#ifdef WIN32
+FILEDES type(*)
+#endif
+
 !***********************************************************************************************
 module fmmap_m
 !***********************************************************************************************
@@ -48,7 +56,7 @@ implicit none
          integer(c_long_long),         value       :: n
          character(kind=c_char,len=1), intent(in)  :: cfilename(*)
          integer(c_int),               value       :: cfm
-         integer(c_int),               intent(out) :: cfd
+         FILEDES,                      intent(out) :: cfd
       end function c_mmap_create
 
       integer(c_int) function c_mmap_destroy( cp, n, cfd ) BIND(C)
