@@ -40,20 +40,26 @@ int c_mmap_create( void** ptr
                  , const long long n    
                  , const int filemode   
                  , const char* filename 
-                 , FILEHANDLE fd ) {
+                 , FILEHANDLE fd) {
 	
 #ifdef POSIX
     int stat;
     if (filemode == 1) {
-        char name[strlen(filename)+6];
-        strcpy(name,filename);
-        strcat(name,"XXXXXX");
+        char path[MAX_PATH];
+		if (strlen(filename) == 0) {
+            strcpy(path,".");
+        } else {
+            strcpy(path,filename);
+        }
+        strcat(path,"fmm.tmpXXXXXX");
+        char name[strlen(path)];
+        strcpy(name,path);
         *fd = mkstemp(name);       if (*fd <= 0)  return 1;
-        stat = unlink(name);       if (stat != 0) return 3;
-        stat = ftruncate(*fd, n);  if (stat != 0) return 4;
+        stat = unlink(name);       if (stat != 0) return 2;
+        stat = ftruncate(*fd, n);  if (stat != 0) return 3;
     } else {
         *fd = open(filename,O_RDWR);
-        if (*fd < 0) return 2;
+        if (*fd < 0) return 4;
     }
     // Map the file into memory
     *ptr = mmap ( NULL                        
@@ -69,20 +75,29 @@ int c_mmap_create( void** ptr
 	int stat;
 	HANDLE hm;
     if (filemode == 1) {
-		char name[6];
-		strcpy(name,"abcde");
-		*fd = fopen(name,"wb+");                          if (*fd == NULL) return 100;
-		stat = _fseeki64(*fd, (__int64)(n-1), SEEK_SET);  if (stat != 0)   return 101;
+        char path[MAX_PATH], tmpname[MAX_PATH];
+		if (strlen(filename) == 0) {
+            GetTempPathA(MAX_PATH,path);
+        } else {
+            strcpy(path,filename);
+        }
+		GetTempFileNameA(path,"fmm",0u,tmpname);
+		char name[strlen(tmpname)];
+		strcpy(name,tmpname);
+        printf("%s|\n",name);
+ 		*fd = fopen(name,"wb+");                          if (*fd == NULL) return 1;
+		stat = _fseeki64(*fd, (__int64)(n-1), SEEK_SET);  if (stat != 0)   return 2;
 		char foo = 0; 
-		stat = (int)fwrite(&foo,(size_t)1,(size_t)1,*fd); if (stat == 0)   return 102;
-		stat = fclose(*fd);                               if (stat != 0)   return 103;
-  		*fd = CreateFileA(name,GENERIC_READ | GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL);
-		if (*fd == NULL) return 104;
+		stat = (int)fwrite(&foo,(size_t)1,(size_t)1,*fd); if (stat == 0)   return 3;
+		stat = fclose(*fd);                               if (stat != 0)   return 4;
+  		*fd = CreateFileA(name,GENERIC_READ | GENERIC_WRITE,0,NULL,OPEN_EXISTING
+                         ,FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE, NULL);
+		if (*fd == NULL) return 5;
 	} else {
 		*fd = fopen(filename,"rb+");
 	}
-	hm = CreateFileMappingA(*fd,NULL,PAGE_READWRITE,0,0,NULL); if (hm == NULL) return 5;
-	*ptr = MapViewOfFile(hm,FILE_MAP_ALL_ACCESS,0,0,0);        if (*ptr == NULL) return 6;
+	hm = CreateFileMappingA(*fd,NULL,PAGE_READWRITE,0,0,NULL); if (hm == NULL) return 7;
+	*ptr = MapViewOfFile(hm,FILE_MAP_ALL_ACCESS,0,0,0);        if (*ptr == NULL) return 8;
 #endif
 
     return 0;
@@ -90,10 +105,12 @@ int c_mmap_create( void** ptr
 
 int c_mmap_destroy( void* ptr
                   , const long long n
-                  , FILEHANDLE fd ) {
+                  , const int filemode   
+                  , FILEHANDLE fd) {
 
+    int stat;
 #ifdef POSIX
-    int stat = munmap(ptr, (size_t)n);
+    stat = munmap(ptr, (size_t)n);
     if (stat != 0) return 11;
     stat = close(fd);
     if (stat != 0) return 12;
@@ -101,10 +118,10 @@ int c_mmap_destroy( void* ptr
 #endif
 
 #ifdef WIN32
-	int stat = (int)FlushViewOfFile(ptr,0); if (stat == 0) return 10;
-    stat = (int)UnmapViewOfFile(ptr); if (stat == 0) return 11;
+    stat = (int)FlushViewOfFile(ptr,0); if (stat == 0) return 11;
+    stat = (int)UnmapViewOfFile(ptr); if (stat == 0) return 12;
 	// should we destroy the file mapping ? Probably...
-	stat = (int)CloseHandle(fd); ; if (stat == 0) return 12;
+	stat = (int)CloseHandle(fd); if (stat == 0) return 13;
 	// see also DeleteFileA(), GetTempFileName() and GetTempPath()
 #endif
 

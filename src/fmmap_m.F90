@@ -35,7 +35,8 @@ implicit none
       type(c_ptr), public :: cptr = c_null_ptr
       FILEDES             :: cfd  = NOFILE
       integer(fmmap_size) :: cn   = 0
-      logical             :: used = .false.
+      integer(c_int)      :: cfm
+      character(kind=c_char,len=500) :: cfn
    end type
    
    type(fmmap_t), allocatable :: table(:)
@@ -61,11 +62,12 @@ implicit none
          FILEDES,                      intent(out) :: cfd
       end function c_mmap_create
 
-      integer(c_int) function c_mmap_destroy( cp, n, cfd ) BIND(C)
-         import :: c_ptr, c_int, c_long_long
-         type(c_ptr),          value :: cp
-         integer(c_long_long), value :: n
-         FILEDES,              value :: cfd
+      integer(c_int) function c_mmap_destroy( cp, n, cfm, cfd ) BIND(C)
+         import :: c_ptr, c_int, c_long_long, c_char
+         type(c_ptr),                  value       :: cp
+         integer(c_long_long),         value       :: n
+         integer(c_int),               value       :: cfm
+         FILEDES,                      value       :: cfd
       end function c_mmap_destroy
       
    end interface
@@ -139,7 +141,6 @@ contains
      !!  - can be a directory; in this case the trailing directory separator must be present,
      !!    e.g. `"/tmp/"` rather than "`/tmp`"
    
-   integer(c_int) :: c_fm
    integer :: i, lu, stat
    character(:), allocatable :: filename___
    character(kind=c_char,len=:), allocatable :: c_filename
@@ -154,11 +155,7 @@ contains
    
    if (filemode == FMMAP_SCRATCH) then
       x%cn = nbytes
-      if (present(filename)) then
-         filename___ = trim(filename)//"fmmaptmp"
-      else 
-         filename___ = "./fmmaptmp"
-      end if
+      filename___ = "" ; if (present(filename)) filename___ = trim(filename)
    else if (filemode == FMMAP_OLD) then
       filename___ = filename
       inquire(file=trim(filename___), size=x%cn)
@@ -177,10 +174,10 @@ contains
    end if
    
    c_filename = filename___ // c_null_char
-   c_fm = filemode
+   x%cfm = filemode
    stat = c_mmap_create( x%cptr      &
                        , x%cn        &
-                       , c_fm         &
+                       , x%cfm       &
                        , c_filename  &
                        , x%cfd       )
    if (stat /= 0) then
@@ -209,6 +206,7 @@ contains
       
    stat = c_mmap_destroy( x%cptr             &
                         , x%cn               &
+                        , x%cfm              &
                         , x%cfd              )
    if (stat /= 0) then
       write(msg,*) "*** fmmap_destroy_cptr: error code ", stat
