@@ -83,11 +83,12 @@ fpm test --flag '-DWIN32'
 
 ### Tested on
 macOS 10.13      / gcc-gfortran 13  
-Windows 10 MSYS2 / gcc-gfortan 13  
-Linux Debian 11  / Intel ifort/icc 2021 (without fpm)
+Windows 10 MSYS2 / gcc-gfortran 13  
+Linux Debian 11  / Intel icc-ifort 2021 (without fpm)
+Lubuntu 22.04    / gcc-gfortran 11 (without fpm)
 
 ### Issues
-On macOS 10.13, for some reason fpm (0.10) does not pass the `-DPOSIX` macro. The compilation has to be performed manually:
+- On macOS 10.13, for some reason fpm (0.10) does not pass the `-DPOSIX` macro. The compilation has to be performed manually:
 `gcc -c -DPOSIX src/fmmap_c.c && gfortran -DPOSIX -Isrc src/fmmap_m.F90 test/fmmaptest.f90 fmmap_c.o && ./a.out`
 
 
