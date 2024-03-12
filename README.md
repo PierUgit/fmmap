@@ -82,7 +82,7 @@ fpm test --flag '-DWIN32'
 ```
 
 ### Tested on
-macOS 10.13 / gcc-gfortran 13
+macOS 10.13 / gcc-gfortran 13  
 Windows 10 MSYS2 / gcc-gfortan 13
 
 ### Issues
