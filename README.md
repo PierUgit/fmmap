@@ -84,7 +84,7 @@ fpm test --flag '-DWIN32'
 ### Tested on
 macOS 10.13      / gcc-gfortran 13  
 Windows 10 MSYS2 / gcc-gfortran 13  
-Linux Debian 11  / Intel icc-ifort 2021 (without fpm)
+Linux Debian 11  / Intel icc-ifort 2021 (without fpm)  
 Lubuntu 22.04    / gcc-gfortran 11 (without fpm)
 
 ### Issues
