@@ -1,8 +1,8 @@
-# fmmap 0.1.1: memory mapped files in Fortran
+# fmmap 0.2.0 : memory mapped files in Fortran
 
 ## Introduction
 
-These routines provide *some* of the features of the posix/C memory mapped files with a Fortran interface.
+These routines provide *some* of the features of the C posix or Windows memory mapped files under a simple and unique Fortran interface.
 
 2 usages:
 - allocating arrays that are potentially bigger the RAM+swap size, and which are backed in a temporary file (anonymous mapping)
@@ -72,8 +72,25 @@ call fmmap_create(pr, [n,m], FMMAP_OLD, "./foo2.bin") ! named mapping
 call fmmap_destroy(pr)
 ```
 
+## Compilation
+
+The repository has an fpm (Fortran Package Manager) structure. A macro `POSIX` or `WIN32` must be passed depending on the OS:
+```
+fpm test --flag '-DPOSIX`
+# or
+fpm test --flag '-DWIN32'
+```
+
+### Tested on
+macOS 10.13 / gcc-gfortran 13
+Windows 10 MSYS2 / gcc-gfortan 13
+
+### Issues
+On macOS 10.13, for some reason fpm (0.10) does not pass the `-DPOSIX` macro. The compilation has to be performed manually:
+`gcc -c -DPOSIX src/fmmap_c.c && gfortran -DPOSIX -Isrc src/fmmap_m.F90 test/fmmaptest.f90 fmmap_c.o && ./a.out`
+
+
 ## Limitations
 
 - The intrinsic type versions of `ffmap_create()` and `ffmap_destroy()` are not thread-safe. 
-- The current version is based on the availability of C Posix routines, and won't compile on Windows.
 - Mapping to an array of a derived type containing allocatable or pointer components is not allowed. 
