@@ -51,7 +51,7 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
     
 #ifdef POSIX
     if (x->filemode == 1) {
-        char path[MAX_PATH];
+        char path[1024];
 		if (strlen(filename) == 0) {
             strcpy(path,"./");
         } else {
@@ -68,13 +68,13 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
         x->filedes = open(filename,O_RDWR); if (x->filedes < 0) return 4;
     }
     // Map the file into memory
-    ptr = mmap ( NULL                        
-               , (size_t)x->n                  
-               , PROT_READ | PROT_WRITE      
-               , MAP_SHARED | MAP_NORESERVE  
-               , x->filedes                         
-               , 0 );
-    if (ptr == MAP_FAILED) return 5;
+    x->ptr = mmap ( NULL                        
+                  , (size_t)x->n                  
+                  , PROT_READ | PROT_WRITE      
+                  , MAP_SHARED | MAP_NORESERVE  
+                  , x->filedes                         
+                  , 0 );
+    if (x->ptr == MAP_FAILED) return 5;
 #endif
 
 #ifdef WIN32
