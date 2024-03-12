@@ -1,13 +1,3 @@
-#ifdef POSIX
-#define FILEDES integer(c_int)
-#define NOFILE -1
-#endif
-
-#ifdef WIN32
-#define FILEDES type(c_ptr)
-#define NOFILE c_null_ptr
-#endif
-
 !***********************************************************************************************
 module fmmap_m
 !***********************************************************************************************
@@ -30,13 +20,18 @@ implicit none
    character(c_char) :: c
    integer, parameter :: bitsperbyte = storage_size(c)
    
-   type fmmap_t   ! descriptor
+   type, bind(C) :: fmmap_t   ! descriptor
       private
       type(c_ptr), public :: cptr = c_null_ptr
-      FILEDES             :: cfd  = NOFILE
       integer(fmmap_size) :: cn   = 0
-      integer(c_int)      :: cfm
-      character(kind=c_char,len=500) :: cfn
+      integer(c_int)      :: cfilemode
+#ifdef POSIX
+      integer(c_int)      :: cfiledes = -1
+#endif
+#ifdef WIN32
+      type(c_ptr)         :: cfiledes = c_null_ptr;
+      type(c_ptr)         :: cmapdes  = c_null_ptr
+#endif
    end type
    
    type(fmmap_t), allocatable :: table(:)
@@ -53,21 +48,15 @@ implicit none
    
    interface
    
-      integer(c_int) function c_mmap_create( cp, n, cfm, cfilename, cfd ) BIND(C)
-         import :: c_ptr, c_int, c_long_long, c_char
-         type(c_ptr),                  intent(out) :: cp
-         integer(c_long_long),         value       :: n
-         character(kind=c_char,len=1), intent(in)  :: cfilename(*)
-         integer(c_int),               value       :: cfm
-         FILEDES,                      intent(out) :: cfd
+      integer(c_int) function c_mmap_create( x, cfilename ) BIND(C)
+         import :: c_int, c_char, fmmap_t
+         type(fmmap_t),                intent(inout) :: x 
+         character(kind=c_char,len=1), intent(in)    :: cfilename(*)
       end function c_mmap_create
 
-      integer(c_int) function c_mmap_destroy( cp, n, cfm, cfd ) BIND(C)
-         import :: c_ptr, c_int, c_long_long, c_char
-         type(c_ptr),                  value       :: cp
-         integer(c_long_long),         value       :: n
-         integer(c_int),               value       :: cfm
-         FILEDES,                      value       :: cfd
+      integer(c_int) function c_mmap_destroy( x ) BIND(C)
+         import :: c_int, c_char, fmmap_t
+         type(fmmap_t),                intent(inout) :: x 
       end function c_mmap_destroy
       
    end interface
@@ -174,12 +163,8 @@ contains
    end if
    
    c_filename = filename___ // c_null_char
-   x%cfm = filemode
-   stat = c_mmap_create( x%cptr      &
-                       , x%cn        &
-                       , x%cfm       &
-                       , c_filename  &
-                       , x%cfd       )
+   x%cfilemode = filemode
+   stat = c_mmap_create( x, c_filename )
    if (stat /= 0) then
       write(msg,*) "*** fmmap_create_cptr: error code ", stat
       error stop trim(msg)
@@ -204,10 +189,7 @@ contains
       error stop "*** fmmap_destroy_cptr: attempt to free a non associated pointer"
    end if
       
-   stat = c_mmap_destroy( x%cptr             &
-                        , x%cn               &
-                        , x%cfm              &
-                        , x%cfd              )
+   stat = c_mmap_destroy( x )
    if (stat /= 0) then
       write(msg,*) "*** fmmap_destroy_cptr: error code ", stat
       error stop trim(msg)

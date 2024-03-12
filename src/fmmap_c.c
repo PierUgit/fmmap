@@ -35,17 +35,27 @@ error codes:
   11: the unmapping failed
   12: the file could not be closed
 */
+
+
+typedef struct {
+    void*     ptr;
+    long long n;
+    int       filemode;
+#ifdef POSIX
+    int       filedes;
+#endif
+#ifdef WIN32
+    HANDLE    filedes;
+    HANDLE    mapdes;
+#endif
+} fmmap_t;
        
-int c_mmap_create( void** ptr           
-                 , const long long n    
-                 , const int filemode   
-                 , const char* filename 
-                 , FILEHANDLE fd) {
+int c_mmap_create( fmmap_t* x, const char* filename) {
 	
     int stat;
     
 #ifdef POSIX
-    if (filemode == 1) {
+    if (x->filemode == 1) {
         char path[MAX_PATH];
 		if (strlen(filename) == 0) {
             strcpy(path,"./");
@@ -56,25 +66,25 @@ int c_mmap_create( void** ptr
         strcat(path,"fmm.tmpXXXXXX");
         char name[strlen(path)];
         strcpy(name,path);
-        *fd = mkstemp(name);       if (*fd <= 0)  return 1;
-        stat = unlink(name);       if (stat != 0) return 2;
-        stat = ftruncate(*fd, n);  if (stat != 0) return 3;
+        x->filedes = mkstemp(name);         if (x->filedes <= 0)  return 1;
+        stat = unlink(name);           if (stat != 0) return 2;
+        stat = ftruncate(x->filedes, x->n);    if (stat != 0) return 3;
     } else {
-        *fd = open(filename,O_RDWR); if (*fd < 0) return 4;
+        x->filedes = open(filename,O_RDWR); if (x->filedes < 0) return 4;
     }
     // Map the file into memory
-    *ptr = mmap ( NULL                        
-                , (size_t)n                  
-                , PROT_READ | PROT_WRITE      
-                , MAP_SHARED | MAP_NORESERVE  
-                , *fd                         
-                , 0 );
+    ptr = mmap ( NULL                        
+               , (size_t)x->n                  
+               , PROT_READ | PROT_WRITE      
+               , MAP_SHARED | MAP_NORESERVE  
+               , x->filedes                         
+               , 0 );
     if (ptr == MAP_FAILED) return 5;
 #endif
 
 #ifdef WIN32
-	HANDLE hm;
-    if (filemode == 1) {
+	//HANDLE mapdes;
+    if (x->filemode == 1) {
         char path[MAX_PATH], tmpname[MAX_PATH];
 		if (strlen(filename) == 0) {
             GetTempPathA(MAX_PATH,path);
@@ -84,42 +94,44 @@ int c_mmap_create( void** ptr
 		GetTempFileNameA(path,"fmm",0u,tmpname);
 		char name[strlen(tmpname)];
 		strcpy(name,tmpname);
-        printf("%s|\n",name);
- 		*fd = fopen(name,"wb+");                          if (*fd == NULL) return 1;
-		stat = _fseeki64(*fd, (__int64)(n-1), SEEK_SET);  if (stat != 0)   return 2;
+ 		x->filedes = fopen(name,"wb+");                          if (x->filedes == NULL) return 1;
+		stat = _fseeki64(x->filedes, (__int64)(x->n-1), SEEK_SET);  if (stat != 0)   return 2;
 		char foo = 0; 
-		stat = (int)fwrite(&foo,(size_t)1,(size_t)1,*fd); if (stat == 0)   return 3;
-		stat = fclose(*fd);                               if (stat != 0)   return 4;
-  		*fd = CreateFileA(name,GENERIC_READ | GENERIC_WRITE,0,NULL,OPEN_EXISTING
-                         ,FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE, NULL);
-		                                                  if (*fd == NULL) return 5;
-	} else {
-		*fd = fopen(filename,"rb+");
+		stat = (int)fwrite(&foo,(size_t)1,(size_t)1,x->filedes); if (stat == 0)   return 3;
+		stat = fclose(x->filedes);                               if (stat != 0)   return 4;
+  		x->filedes = CreateFileA(name,GENERIC_READ | GENERIC_WRITE,0,NULL,OPEN_EXISTING
+                           ,FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE, NULL);
+		if (x->filedes == INVALID_HANDLE_VALUE) return 5;
+    } else {
+        char name[9];
+        strcpy(name,filename);
+		x->filedes = CreateFileA(name,GENERIC_READ | GENERIC_WRITE,0,NULL,OPEN_EXISTING
+                         ,FILE_ATTRIBUTE_NORMAL, NULL);
+		if (x->filedes == INVALID_HANDLE_VALUE) return 7;
 	}
-	hm = CreateFileMappingA(*fd,NULL,PAGE_READWRITE,0,0,NULL); if (hm == NULL)   return 7;
-	*ptr = MapViewOfFile(hm,FILE_MAP_ALL_ACCESS,0,0,0);        if (*ptr == NULL) return 8;
+	x->mapdes = CreateFileMappingA(x->filedes,NULL,PAGE_READWRITE,0,0,NULL); 
+    if (x->mapdes == NULL)   return 8;
+	x->ptr = MapViewOfFile(x->mapdes,FILE_MAP_ALL_ACCESS,0,0,0);        
+    if (x->ptr == NULL) return 9;
 #endif
 
     return 0;
 }
 
-int c_mmap_destroy( void* ptr
-                  , const long long n
-                  , const int filemode   
-                  , FILEHANDLE fd) {
+int c_mmap_destroy( fmmap_t* x) {
 
     int stat;
     
 #ifdef POSIX
-    stat = munmap(ptr, (size_t)n); if (stat != 0) return 11;
-    stat = close(fd);              if (stat != 0) return 12;
+    stat = munmap(x->ptr, (size_t)x->n); if (stat != 0) return 11;
+    stat = close(x->filedes);              if (stat != 0) return 12;
 #endif
 
 #ifdef WIN32
-    stat = (int)FlushViewOfFile(ptr,0); if (stat == 0) return 11;
-    stat = (int)UnmapViewOfFile(ptr);   if (stat == 0) return 12;
-	// should we destroy the file mapping ? Probably...
-	stat = (int)CloseHandle(fd);        if (stat == 0) return 13;
+    stat = (int)FlushViewOfFile(x->ptr,0); if (stat == 0) return 11;
+    stat = (int)UnmapViewOfFile(x->ptr);   if (stat == 0) return 12;
+    stat = (int)CloseHandle(x->mapdes);        if (stat == 0) return 14;
+	stat = (int)CloseHandle(x->filedes);        if (stat == 0) return 13;
 #endif
 
 	return 0;
