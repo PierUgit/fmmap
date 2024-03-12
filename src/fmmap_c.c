@@ -26,14 +26,7 @@ filemode = 1: scratch file
            3: create a new file
            
 error codes:
-   1: the file could not be created
-   2: the file could be opened
-   3: the scratch file could not be unlinked
-   4: the scratch file could not be sized
-   5: the mapping failed
-  
-  11: the unmapping failed
-  12: the file could not be closed
+    (later)
 */
 
 
@@ -49,6 +42,8 @@ typedef struct {
     HANDLE    mapdes;
 #endif
 } fmmap_t;
+
+
        
 int c_mmap_create( fmmap_t* x, const char* filename) {
 	
@@ -67,8 +62,8 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
         char name[strlen(path)];
         strcpy(name,path);
         x->filedes = mkstemp(name);         if (x->filedes <= 0)  return 1;
-        stat = unlink(name);           if (stat != 0) return 2;
-        stat = ftruncate(x->filedes, x->n);    if (stat != 0) return 3;
+        stat = unlink(name);                if (stat != 0) return 2;
+        stat = ftruncate(x->filedes, x->n); if (stat != 0) return 3;
     } else {
         x->filedes = open(filename,O_RDWR); if (x->filedes < 0) return 4;
     }
@@ -83,7 +78,6 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
 #endif
 
 #ifdef WIN32
-	//HANDLE mapdes;
     if (x->filemode == 1) {
         char path[MAX_PATH], tmpname[MAX_PATH];
 		if (strlen(filename) == 0) {
@@ -94,19 +88,23 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
 		GetTempFileNameA(path,"fmm",0u,tmpname);
 		char name[strlen(tmpname)];
 		strcpy(name,tmpname);
- 		x->filedes = fopen(name,"wb+");                          if (x->filedes == NULL) return 1;
-		stat = _fseeki64(x->filedes, (__int64)(x->n-1), SEEK_SET);  if (stat != 0)   return 2;
+ 		x->filedes = fopen(name,"wb+");                          
+            if (x->filedes == NULL) return 1;
+		stat = _fseeki64(x->filedes, (__int64)(x->n-1), SEEK_SET);
+            if (stat != 0)   return 2;
 		char foo = 0; 
-		stat = (int)fwrite(&foo,(size_t)1,(size_t)1,x->filedes); if (stat == 0)   return 3;
-		stat = fclose(x->filedes);                               if (stat != 0)   return 4;
+		stat = (int)fwrite(&foo,(size_t)1,(size_t)1,x->filedes);
+            if (stat == 0)   return 3;
+		stat = fclose(x->filedes);                               
+            if (stat != 0)   return 4;
   		x->filedes = CreateFileA(name,GENERIC_READ | GENERIC_WRITE,0,NULL,OPEN_EXISTING
-                           ,FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE, NULL);
+                                ,FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE, NULL);
 		if (x->filedes == INVALID_HANDLE_VALUE) return 5;
     } else {
         char name[9];
         strcpy(name,filename);
 		x->filedes = CreateFileA(name,GENERIC_READ | GENERIC_WRITE,0,NULL,OPEN_EXISTING
-                         ,FILE_ATTRIBUTE_NORMAL, NULL);
+                                ,FILE_ATTRIBUTE_NORMAL, NULL);
 		if (x->filedes == INVALID_HANDLE_VALUE) return 7;
 	}
 	x->mapdes = CreateFileMappingA(x->filedes,NULL,PAGE_READWRITE,0,0,NULL); 
@@ -124,14 +122,14 @@ int c_mmap_destroy( fmmap_t* x) {
     
 #ifdef POSIX
     stat = munmap(x->ptr, (size_t)x->n); if (stat != 0) return 11;
-    stat = close(x->filedes);              if (stat != 0) return 12;
+    stat = close(x->filedes);            if (stat != 0) return 12;
 #endif
 
 #ifdef WIN32
     stat = (int)FlushViewOfFile(x->ptr,0); if (stat == 0) return 11;
     stat = (int)UnmapViewOfFile(x->ptr);   if (stat == 0) return 12;
-    stat = (int)CloseHandle(x->mapdes);        if (stat == 0) return 14;
-	stat = (int)CloseHandle(x->filedes);        if (stat == 0) return 13;
+    stat = (int)CloseHandle(x->mapdes);    if (stat == 0) return 14;
+	stat = (int)CloseHandle(x->filedes);   if (stat == 0) return 13;
 #endif
 
 	return 0;

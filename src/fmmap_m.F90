@@ -124,11 +124,12 @@ contains
       !! or output size of existing file (for filemode 2)
    integer,          intent(in)            :: filemode !! FILE_SCRATCH, FILE_OLD, or FILE_NEW
    character(*),     intent(in),  optional :: filename 
-     !! FILE_OLD or FILE_new: required name of the file
-     !! FILE_SCRATCH: not required; if present:
-     !!  - a processor dependent unique suffix will be appended
-     !!  - can be a directory; in this case the trailing directory separator must be present,
-     !!    e.g. `"/tmp/"` rather than "`/tmp`"
+     !! FILE_OLD or FILE_new: required name of the file (with or without path)
+     !! FILE_SCRATCH: name of the path; not required;
+     !! - if not present:
+     !!   - POSIX: is "." (current directory) by default
+     !!   - WIN32: the Windows temporary path is inquired     
+     !! - a processor dependent unique filename is be generated
    
    integer :: i, lu, stat
    character(:), allocatable :: filename___
