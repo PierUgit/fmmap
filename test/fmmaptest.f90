@@ -33,7 +33,7 @@ pi2(:,:) = 1
 pi2(n,n) = -1
 call fmmap_destroy(pi2)
 
-print*, "Testing FMMAP_OLD - 1000   500   2   1   -1   should be printed:"
+print*, "Testing FMMAP_OLD"
 print*, "     "//"1000   500   2   1   -1   should be printed:"
 
 call fmmap_create(pi3,[n,n/2],FMMAP_OLD,"./fun1.bin")

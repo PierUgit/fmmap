@@ -409,6 +409,7 @@ contains
       error stop "*** fmmap_destroy(): pointer not found in the internal table"
    end if
    x = table(i)
+   x%cptr = table(i)%cptr   ! not required(?)... But crashes with ifort 21 in non-debug mode otherwise
    table(i)%cptr = c_null_ptr
    
    if (i == size(table)) then
