@@ -41,6 +41,7 @@ typedef struct {
     HANDLE    filedes;
     HANDLE    mapdes;
 #endif
+    bool      used;
 } fmmap_t;
 
 

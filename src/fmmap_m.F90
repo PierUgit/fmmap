@@ -23,15 +23,16 @@ implicit none
    type, bind(C) :: fmmap_t   ! descriptor
       private
       type(c_ptr), public :: cptr = c_null_ptr
-      integer(fmmap_size) :: cn   = 0
+      integer(fmmap_size) :: cn
       integer(c_int)      :: cfilemode
 #ifdef POSIX
-      integer(c_int)      :: cfiledes = -1
+      integer(c_int)      :: cfiledes
 #endif
 #ifdef WIN32
       type(c_ptr)         :: cfiledes = c_null_ptr;
       type(c_ptr)         :: cmapdes  = c_null_ptr
 #endif
+      logical(c_bool)     :: used = .true.
    end type
    
    type(fmmap_t), allocatable :: table(:)
@@ -141,7 +142,8 @@ contains
       error stop "*** fmmap_init: the file storage unit is not a byte"
    end if
    
-   x%cptr = c_null_ptr
+   x%cfilemode = filemode
+   x%used      = .true.
    
    if (filemode == FMMAP_SCRATCH) then
       x%cn = nbytes
@@ -164,7 +166,6 @@ contains
    end if
    
    c_filename = filename___ // c_null_char
-   x%cfilemode = filemode
    stat = c_mmap_create( x, c_filename )
    if (stat /= 0) then
       write(msg,*) "*** fmmap_create_cptr: error code ", stat
@@ -375,17 +376,15 @@ contains
    type(fmmap_t), intent(in) :: x
    
    integer :: i
+   logical(c_bool), allocatable :: used(:)
    !********************************************************************************************
    if (.not.allocated(table)) then
       table = [x]
    else
-      i = 1
-      do while (i <= size(table))
-         if (.not.c_associated(table(i)%cptr)) exit
-         i = i+1
-      end do
-      if (i <= size(table)) then ; table(i) = x
-                            else ; table = [ table, x ]
+      used = table(:)%used
+      i = findloc( used, .false., dim=1 )
+      if (i > 0) then ; table(i) = x
+                 else ; table = [ table, x ]
       end if
    end if
    end subroutine fmmap_table_push
@@ -399,29 +398,32 @@ contains
    type(c_ptr),   intent(in)  :: cptr   ! pointer to search in the table
    
    integer :: i
+   logical :: found
+   logical(c_bool), allocatable :: used(:)
    !********************************************************************************************
+   if (.not.allocated(table)) then
+      error stop "*** fmmap_destroy(): the internal table is not allocated"
+   end if
    i = 1
    do while (i <= size(table))
       if (c_associated(table(i)%cptr,cptr)) exit
       i = i+1
    end do
-   if (i >size(table)) then
+   if (i > size(table)) then
       error stop "*** fmmap_destroy(): pointer not found in the internal table"
    end if
    x = table(i)
-   x%cptr = table(i)%cptr   ! not required(?)... But crashes with ifort 21 in non-debug mode otherwise
-   table(i)%cptr = c_null_ptr
-   
-   if (i == size(table)) then
-      i = size(table) - 1
-      do while (i > 0)
-         if (c_associated(table(i)%cptr)) exit
-         i = i-1
-      end do
-      if (i == 0) then ; deallocate( table )
-                  else ; table = table(1:i)
-      end if
+   x%cptr = table(i)%cptr   ! not required(?)... 
+                            ! But potentially ifort 21 crash without that
+   table(i)%used = .false.
+
+   used = table(:)%used
+   if (count(used) == 0) then
+      deallocate(table)
+   else if (size(table) >= 100 .and. count(used) < 0.75*size(table)) then
+      table = pack( table, mask=used )
    end if
+
    end subroutine fmmap_table_pull
    
 
