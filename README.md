@@ -1,4 +1,4 @@
-# fmmap 0.2.2 : memory mapped files in Fortran
+# fmmap 0.3.0 : memory mapped files in Fortran
 
 ## Introduction
 
@@ -76,10 +76,9 @@ call fmmap_destroy(pr)
 
 The repository has an fpm (Fortran Package Manager) structure. A macro `POSIX` or `WIN32` must be passed depending on the OS:
 ```
-fpm test --flag '-DPOSIX`
-# or
-fpm test --flag '-DWIN32'
+fpm test
 ```
+On Windows, the presence of the `_WIN32` macro is assumed
 
 ### Tested on
 macOS 10.13      / gcc-gfortran 13  
@@ -88,11 +87,9 @@ Linux Debian 11  / Intel icc-ifort 2021 (without fpm)
 Lubuntu 22.04    / gcc-gfortran 11 (without fpm)
 
 ### Issues
-- On macOS 10.13, for some reason fpm (0.10) does not pass the `-DPOSIX` macro. The compilation has to be performed manually:
-`gcc -c -DPOSIX src/fmmap_c.c && gfortran -DPOSIX -Isrc src/fmmap_m.F90 test/fmmaptest.f90 fmmap_c.o && ./a.out`
 
 
 ## Limitations
 
 - The intrinsic type versions of `ffmap_create()` and `ffmap_destroy()` are not thread-safe. 
-- Mapping to an array of a derived type containing allocatable or pointer components is not allowed. 
+- Mapping to an array of a derived type containing allocatable or pointer components is not allowed (well, it's technically possible, but you have to be aware that the memory allocated by these components won't be part of the mapping).

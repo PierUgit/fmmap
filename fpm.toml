@@ -1,9 +1,9 @@
 name = "fmmap"
-version = "0.1.1"
+version = "0.3.1"
 license = "GPL 3"
-author = "PierUgit"
-maintainer = "PierUgit"
-copyright = "Copyright 2024, PierUgit"
+author = "Pierre Hugonnet"
+maintainer = "Pierre Hugonnet"
+copyright = "Copyright 2024, Pierre Hugonnet"
 [build]
 auto-executables = true
 auto-tests = true

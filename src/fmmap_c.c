@@ -7,17 +7,16 @@
 #include <fcntl.h>
 #include <string.h>
 
-#ifdef POSIX
-#include <sys/mman.h>
-#define FILEHANDLE int*
-#endif
-
-#ifdef WIN32
+#ifdef _WIN32
 #include <BaseTsd.h>
 #include <WinDef.h>
 #include <WinNT.h>
 #include <winbase.h>
 #define FILEHANDLE HANDLE*
+#else
+// posix assumed
+#include <sys/mman.h>
+#define FILEHANDLE int*
 #endif
 
 /*
@@ -34,12 +33,11 @@ typedef struct {
     void*     ptr;
     long long n;
     int       filemode;
-#ifdef POSIX
-    int       filedes;
-#endif
-#ifdef WIN32
+#ifdef _WIN32
     HANDLE    filedes;
     HANDLE    mapdes;
+#else
+    int       filedes;
 #endif
     bool      used;
 } fmmap_t;
@@ -50,35 +48,7 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
 	
     int stat;
     
-#ifdef POSIX
-    if (x->filemode == 1) {
-        char path[1024];
-		if (strlen(filename) == 0) {
-            strcpy(path,"./");
-        } else {
-            strcpy(path,filename);
-            strcat(path,"/");
-        }
-        strcat(path,"fmm.tmpXXXXXX");
-        char name[strlen(path)];
-        strcpy(name,path);
-        x->filedes = mkstemp(name);         if (x->filedes <= 0)  return 1;
-        stat = unlink(name);                if (stat != 0) return 2;
-        stat = ftruncate(x->filedes, x->n); if (stat != 0) return 3;
-    } else {
-        x->filedes = open(filename,O_RDWR); if (x->filedes < 0) return 4;
-    }
-    // Map the file into memory
-    x->ptr = mmap ( NULL                        
-                  , (size_t)x->n                  
-                  , PROT_READ | PROT_WRITE      
-                  , MAP_SHARED | MAP_NORESERVE  
-                  , x->filedes                         
-                  , 0 );
-    if (x->ptr == MAP_FAILED) return 5;
-#endif
-
-#ifdef WIN32
+#ifdef _WIN32
     if (x->filemode == 1) {
         char path[MAX_PATH], tmpname[MAX_PATH];
 		if (strlen(filename) == 0) {
@@ -112,6 +82,32 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
     if (x->mapdes == NULL)   return 8;
 	x->ptr = MapViewOfFile(x->mapdes,FILE_MAP_ALL_ACCESS,0,0,0);        
     if (x->ptr == NULL) return 9;
+#else
+    if (x->filemode == 1) {
+        char path[1024];
+		if (strlen(filename) == 0) {
+            strcpy(path,"./");
+        } else {
+            strcpy(path,filename);
+            strcat(path,"/");
+        }
+        strcat(path,"fmm.tmpXXXXXX");
+        char name[strlen(path)];
+        strcpy(name,path);
+        x->filedes = mkstemp(name);         if (x->filedes <= 0)  return 1;
+        stat = unlink(name);                if (stat != 0) return 2;
+        stat = ftruncate(x->filedes, x->n); if (stat != 0) return 3;
+    } else {
+        x->filedes = open(filename,O_RDWR); if (x->filedes < 0) return 4;
+    }
+    // Map the file into memory
+    x->ptr = mmap ( NULL                        
+                  , (size_t)x->n                  
+                  , PROT_READ | PROT_WRITE      
+                  , MAP_SHARED | MAP_NORESERVE  
+                  , x->filedes                         
+                  , 0 );
+    if (x->ptr == MAP_FAILED) return 5;
 #endif
 
     return 0;
@@ -121,16 +117,14 @@ int c_mmap_destroy( fmmap_t* x) {
 
     int stat;
     
-#ifdef POSIX
-    stat = munmap(x->ptr, (size_t)x->n); if (stat != 0) return 11;
-    stat = close(x->filedes);            if (stat != 0) return 12;
-#endif
-
-#ifdef WIN32
+#ifdef _WIN32
     stat = (int)FlushViewOfFile(x->ptr,0); if (stat == 0) return 11;
     stat = (int)UnmapViewOfFile(x->ptr);   if (stat == 0) return 12;
     stat = (int)CloseHandle(x->mapdes);    if (stat == 0) return 14;
 	stat = (int)CloseHandle(x->filedes);   if (stat == 0) return 13;
+#else
+    stat = munmap(x->ptr, (size_t)x->n); if (stat != 0) return 11;
+    stat = close(x->filedes);            if (stat != 0) return 12;
 #endif
 
 	return 0;

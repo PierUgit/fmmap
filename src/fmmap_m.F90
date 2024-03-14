@@ -25,12 +25,12 @@ implicit none
       type(c_ptr), public :: cptr = c_null_ptr
       integer(fmmap_size) :: cn
       integer(c_int)      :: cfilemode
-#ifdef POSIX
-      integer(c_int)      :: cfiledes
-#endif
-#ifdef WIN32
+#ifdef _WIN32
       type(c_ptr)         :: cfiledes = c_null_ptr;
       type(c_ptr)         :: cmapdes  = c_null_ptr
+#else
+! posix assumed
+      integer(c_int)      :: cfiledes
 #endif
       logical(c_bool)     :: used = .true.
    end type
