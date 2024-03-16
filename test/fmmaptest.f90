@@ -7,7 +7,7 @@ type(fmmap_t) :: x
 double precision, pointer :: pr(:)
 integer, pointer :: pi2(:,:), pi3(:,:,:)
 integer :: i, stat
-integer(fmmap_size) :: n, nbytes
+integer(fmmap_size_t) :: n, nbytes
 
 type sometype
    integer :: i
@@ -16,7 +16,7 @@ type sometype
 end type
 type(sometype), pointer :: pt(:)
 
-n = 1000_fmmap_size
+n = 1000_fmmap_size_t
 
 print*, "Testing FMMAP_SCRATCH:"
 print*, "     "//"1000   1000.0 should be printed:"
@@ -42,7 +42,7 @@ call fmmap_destroy(pi3)
 
 print*, "Testing FMMAP_SCRATCH"
 
-n = 10_fmmap_size ** 8
+n = 10_fmmap_size_t ** 8
 nbytes = fmmap_nbytes(n,storage_size(pt))
 print*, "     "//"creating scratch mapping of", nbytes," bytes"
 call fmmap_create(x,nbytes,FMMAP_SCRATCH,"./")

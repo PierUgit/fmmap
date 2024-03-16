@@ -1,4 +1,4 @@
-   integer(fmmap_size), intent(in)          :: sh(:) 
+   integer(size_t), intent(in)          :: sh(:) 
       !! shape of the pointer
       !! - FILE_SCRATCH and FILE_NEW
       !!   - the size of `sh` must be equal to the rank of `p`
@@ -14,14 +14,14 @@
      !!   - POSIX: is "." (current directory) by default
      !!   - WIN32: the Windows temporary path is inquired     
      !! - a processor dependent unique filename is be generated
-   integer(fmmap_size), intent(in), optional :: lbound(:)
+   integer(size_t), intent(in), optional :: lbound(:)
       !! lower bounds of the output pointer;
       !! the size of `lbound` must be equal to the rank of `p`
       
    integer, parameter :: ss = storage_size(q)
    type(fmmap_t) :: x
-   integer(fmmap_size) :: nbytes, n
-   integer(fmmap_size), allocatable :: sh___(:), lb(:), ub(:)
+   integer(size_t) :: nbytes, n
+   integer(size_t), allocatable :: sh___(:), lb(:), ub(:)
    !********************************************************************************************
    
    if (rank(p) < 1 .or. rank(p) > 7) error stop msg0//msg1
@@ -41,7 +41,7 @@
    else
       sh___ = sh      
    end if
-   allocate( lb(rank(p)), source=1_fmmap_size )
+   allocate( lb(rank(p)), source=1_size_t )
    if (present(lbound)) lb = lbound
    ub = lb + sh___ - 1
    

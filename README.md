@@ -1,4 +1,4 @@
-# fmmap 0.3.0 : memory mapped files in Fortran
+# fmmap 0.4.0 : memory mapped files in Fortran
 
 ## Introduction
 
@@ -11,8 +11,8 @@ These routines provide *some* of the features of the C posix or Windows memory m
 ## Usage
 
 There are 2 different approaches:
-- one which is "type agnostic", as it just manipulates bytes and returns a C pointer. The programmer has to manage the conversion between elements and bytes and between the C and a Fortran pointer... Which is not a big deal anyway
-- another one that hides all the C stuff and returns directly a Fortran pointer. Overall simpler. It could be implemented for all the intrinsic types/kinds, but for demonstration it is just implemented right now for `real`, `double precision`, `complex` `complex(kind(0d0)`, `integer`, and `integer(int64)`.
+- one which is "type agnostic", as it just manipulates bytes and returns a C pointer. The programmer has to manage the conversion between elements and bytes and between the C and a Fortran pointer... Which is not a big deal anyway (the module provides some functions for the conversions).
+- another one that hides all the C stuff and returns directly a Fortran pointer, and which is overall simpler. It could be implemented for all the intrinsic types/kinds, but it is just implemented right now for `real`, `double precision`, `complex` `double complex`, `integer`, and `integer(fmmap_other_int)` (the latter being an integer different from the default one; it will virtually always be `integer(int64)`).
 
 The approaches are complementary and both are available in the module.
 

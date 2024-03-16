@@ -6,24 +6,28 @@ use, intrinsic :: iso_fortran_env
 implicit none
 
    private
-   public :: fmmap_size, fmmap_bigint, fmmap_t, fmmap_nbytes, fmmap_nelems
+   public :: fmmap_size_t, fmmap_other_int, fmmap_t, fmmap_nbytes, fmmap_nelems
    public :: fmmap_create, fmmap_destroy
    public :: FMMAP_SCRATCH, FMMAP_OLD, FMMAP_NEW
 
    !> integer kind used for the sizes and and number of bytes or elements
-   integer, parameter :: fmmap_size = c_long_long
+   integer, parameter :: size_t = c_long_long
+   integer, parameter :: fmmap_size_t = size_t
    
-   !> integer kind of at least 18 digits range for pointers in fmmap_create and fmmap_destroy
-   !> mapped to int64 if defined
-   integer, parameter :: fmmap_bigint = merge(int64,selected_int_kind(r=18),int64 > 0)
-   
+   !> integer kind different from the default kind, 
+   !> and which is either int64 (or similar) ot int32 (or similar)
+   integer, parameter :: int_least32 = merge(int32,selected_int_kind(r= 9),int32 > 0)
+   integer, parameter :: int_least64 = merge(int64,selected_int_kind(r=18),int64 > 0)
+   integer, parameter :: other_int = merge(int_least64,int_least32,int_least64 /= kind(0))
+   integer, parameter :: fmmap_other_int = other_int
+      
    character(c_char) :: c
    integer, parameter :: bitsperbyte = storage_size(c)
    
    type, bind(C) :: fmmap_t   ! descriptor
       private
       type(c_ptr), public :: cptr = c_null_ptr
-      integer(fmmap_size) :: cn
+      integer(size_t) :: cn
       integer(c_int)      :: cfilemode
 #ifdef _WIN32
       type(c_ptr)         :: cfiledes = c_null_ptr;
@@ -88,9 +92,9 @@ contains
    !********************************************************************************************
    !! converts a number of elements to a number of bytes
    !********************************************************************************************
-   integer(fmmap_size), intent(in) :: n   !! number of elements
+   integer(size_t), intent(in) :: n   !! number of elements
    integer,             intent(in) :: ss  !! storage size (in bits) of 1 element
-   integer(fmmap_size) :: fmmap_nbytes    !! number of bytes
+   integer(size_t) :: fmmap_nbytes    !! number of bytes
    !********************************************************************************************
    fmmap_nbytes = n * (ss / bitsperbyte)
    end function fmmap_nbytes
@@ -100,11 +104,11 @@ contains
    !********************************************************************************************
    !! converts a number of bytes into a number of elements
    !********************************************************************************************
-   integer(fmmap_size), intent(in) :: nbytes !! number of nbytes
+   integer(size_t), intent(in) :: nbytes !! number of nbytes
    integer,             intent(in) :: ss     !! storage size (in bits) of 1 element
-   integer(fmmap_size) :: fmmap_nelems   !! number of elements
+   integer(size_t) :: fmmap_nelems   !! number of elements
    
-   integer(fmmap_size) :: bytesperelem
+   integer(size_t) :: bytesperelem
    !********************************************************************************************
    bytesperelem = ss / bitsperbyte
    fmmap_nelems = nbytes / bytesperelem
@@ -120,7 +124,7 @@ contains
    !! Creates a "generic" mapping to a C pointer, stored in `x%cptr
    !********************************************************************************************
    type(fmmap_t),    intent(out)           :: x   !! descriptor
-   integer(fmmap_size)                     :: nbytes 
+   integer(size_t)                     :: nbytes 
       !! input requested size (for filemode 1 or 3), 
       !! or output size of existing file (for filemode 2)
    integer,          intent(in)            :: filemode !! FILE_SCRATCH, FILE_OLD, or FILE_NEW
@@ -273,11 +277,11 @@ contains
    !********************************************************************************************
    subroutine fmmap_create_di(p,sh,filemode,filename,lbound)
    !********************************************************************************************
-   !! Creates a mapping to a `integer(kind=fmmap_bigint)` pointer `p`
+   !! Creates a mapping to a `integer(kind=fmmap_other_int)` pointer `p`
    !! This routine is not thread safe !
    !********************************************************************************************
-   integer(kind=fmmap_bigint), pointer :: p(..)   ! on output, `p` points to the mapped file
-   integer(kind=fmmap_bigint), pointer :: q(:)
+   integer(kind=fmmap_other_int), pointer :: p(..)   ! on output, `p` points to the mapped file
+   integer(kind=fmmap_other_int), pointer :: q(:)
 
    include "fmmap_create.fi"
         
@@ -357,11 +361,11 @@ contains
    !********************************************************************************************
    subroutine fmmap_destroy_di(p)
    !********************************************************************************************
-   !! Destroys a mapping to a `integer(kind=fmmap_bigint)` pointer
+   !! Destroys a mapping to a `integer(kind=fmmap_other_int)` pointer
    !! (the file is unmapped and closed, and the pointer is nullified)
    !! This routine is not thread safe !
    !********************************************************************************************
-   integer(kind=fmmap_bigint), pointer :: p(..)   ! the pointer associated to the mapping to destroy
+   integer(kind=fmmap_other_int), pointer :: p(..)   ! the pointer associated to the mapping to destroy
 
    include "fmmap_destroy.fi"
    
