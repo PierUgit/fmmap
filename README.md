@@ -12,7 +12,7 @@ These routines provide *some* of the features of the C posix or Windows memory m
 
 There are 2 different approaches:
 - one which is "type agnostic", as it just manipulates bytes and returns a C pointer. The programmer has to manage the conversion between elements and bytes and between the C and a Fortran pointer... Which is not a big deal anyway (the module provides some functions for the conversions).
-- another one that hides all the C stuff and returns directly a Fortran pointer, and which is overall simpler. It could be implemented for all the intrinsic types/kinds, but it is just implemented right now for `real`, `double precision`, `complex` `double complex`, `integer`, and `integer(fmmap_other_int)` (the latter being an integer different from the default one; it will virtually always be `integer(int64)`).
+- another one that hides all the C stuff and returns directly a Fortran pointer, and which is overall simpler. It could be implemented for all the intrinsic types/kinds, but it is just implemented right now for `real32` and `real64` kinds of the `real` and `complex` types, and for the `int32` and `int64` kinds of the `integer` type (the kind values being defined in the `iso_fortran_env` intrinsic module.
 
 The approaches are complementary and both are available in the module.
 

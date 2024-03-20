@@ -6,7 +6,7 @@ use, intrinsic :: iso_fortran_env
 implicit none
 
    private
-   public :: fmmap_size_t, fmmap_other_int, fmmap_t, fmmap_nbytes, fmmap_nelems
+   public :: fmmap_size_t, fmmap_t, fmmap_nbytes, fmmap_nelems
    public :: fmmap_create, fmmap_destroy
    public :: FMMAP_SCRATCH, FMMAP_OLD, FMMAP_NEW
 
@@ -14,12 +14,8 @@ implicit none
    integer, parameter :: size_t = c_long_long
    integer, parameter :: fmmap_size_t = size_t
    
-   !> integer kind different from the default kind, 
-   !> and which is either int64 (or similar) ot int32 (or similar)
-   integer, parameter :: int_least32 = merge(int32,selected_int_kind(r= 9),int32 > 0)
-   integer, parameter :: int_least64 = merge(int64,selected_int_kind(r=18),int64 > 0)
-   integer, parameter :: other_int = merge(int_least64,int_least32,int_least64 /= kind(0))
-   integer, parameter :: fmmap_other_int = other_int
+   !> kinds for the intrinsic kind versions
+   integer, parameter :: rk1 = real32, rk2 = real64, ik1 = int32, ik2 = int64
       
    character(c_char) :: c
    integer, parameter :: bitsperbyte = storage_size(c)
@@ -71,18 +67,18 @@ implicit none
    !> This routine is not thread safe !
    interface fmmap_create
       module procedure fmmap_create_cptr
-      module procedure fmmap_create_real,    fmmap_create_dp
-      module procedure fmmap_create_complex, fmmap_create_dc
-      module procedure fmmap_create_integer, fmmap_create_di
+      module procedure fmmap_create_rk1, fmmap_create_rk2
+      module procedure fmmap_create_ck1, fmmap_create_ck2
+      module procedure fmmap_create_ik1, fmmap_create_ik2
    end interface
    
    !> Generic routine name that destroys an existing mapping
    !> This routine is not thread safe !
    interface fmmap_destroy
       module procedure fmmap_destroy_cptr
-      module procedure fmmap_destroy_real,    fmmap_destroy_dp
-      module procedure fmmap_destroy_complex, fmmap_destroy_dc
-      module procedure fmmap_destroy_integer, fmmap_destroy_di
+      module procedure fmmap_destroy_rk1, fmmap_destroy_rk2
+      module procedure fmmap_destroy_ck1, fmmap_destroy_ck2
+      module procedure fmmap_destroy_ik1, fmmap_destroy_ik2
    end interface
    
 contains
@@ -205,171 +201,171 @@ contains
    
    
    !********************************************************************************************
-   subroutine fmmap_create_real(p,sh,filemode,filename,lbound)
+   subroutine fmmap_create_rk1(p,sh,filemode,filename,lbound)
    !********************************************************************************************
    !! Creates a mapping to a `real` pointer `p`
    !! This routine is not thread safe !
    !********************************************************************************************
-   real, pointer :: p(..)   ! on output, `p` points to the mapped file
-   real, pointer :: q(:)
+   real(rk1), pointer :: p(..)   ! on output, `p` points to the mapped file
+   real(rk1), pointer :: q(:)
 
    include "fmmap_create.fi"
         
-   end subroutine fmmap_create_real
+   end subroutine fmmap_create_rk1
 
 
    !********************************************************************************************
-   subroutine fmmap_create_dp(p,sh,filemode,filename,lbound)
+   subroutine fmmap_create_rk2(p,sh,filemode,filename,lbound)
    !********************************************************************************************
    !! Creates a mapping to a `double precision` pointer `p`
    !! This routine is not thread safe !
    !********************************************************************************************
-   double precision, pointer :: p(..)   ! on output, `p` points to the mapped file
-   double precision, pointer :: q(:)
+   real(rk2), pointer :: p(..)   ! on output, `p` points to the mapped file
+   real(rk2), pointer :: q(:)
 
    include "fmmap_create.fi"
         
-   end subroutine fmmap_create_dp
+   end subroutine fmmap_create_rk2
 
 
    !********************************************************************************************
-   subroutine fmmap_create_complex(p,sh,filemode,filename,lbound)
+   subroutine fmmap_create_ck1(p,sh,filemode,filename,lbound)
    !********************************************************************************************
    !! Creates a mapping to a `complex` pointer `p`
    !! This routine is not thread safe !
    !********************************************************************************************
-   complex, pointer :: p(..)   ! on output, `p` points to the mapped file
-   complex, pointer :: q(:)
+   complex(rk1), pointer :: p(..)   ! on output, `p` points to the mapped file
+   complex(rk1), pointer :: q(:)
 
    include "fmmap_create.fi"
         
-   end subroutine fmmap_create_complex
+   end subroutine fmmap_create_ck1
 
 
    !********************************************************************************************
-   subroutine fmmap_create_dc(p,sh,filemode,filename,lbound)
+   subroutine fmmap_create_ck2(p,sh,filemode,filename,lbound)
    !********************************************************************************************
    !! Creates a mapping to a `double complex` pointer `p`
    !! This routine is not thread safe !
    !********************************************************************************************
-   complex(kind=kind(0d0)), pointer :: p(..)   ! on output, `p` points to the mapped file
-   complex(kind=kind(0d0)), pointer :: q(:)
+   complex(rk2), pointer :: p(..)   ! on output, `p` points to the mapped file
+   complex(rk2), pointer :: q(:)
 
    include "fmmap_create.fi"
         
-   end subroutine fmmap_create_dc
+   end subroutine fmmap_create_ck2
 
 
    !********************************************************************************************
-   subroutine fmmap_create_integer(p,sh,filemode,filename,lbound)
+   subroutine fmmap_create_ik1(p,sh,filemode,filename,lbound)
    !********************************************************************************************
    !! Creates a mapping to a `integer` pointer `p`
    !! This routine is not thread safe !
    !********************************************************************************************
-   integer, pointer :: p(..)   ! on output, `p` points to the mapped file
-   integer, pointer :: q(:)
+   integer(ik1), pointer :: p(..)   ! on output, `p` points to the mapped file
+   integer(ik1), pointer :: q(:)
 
    include "fmmap_create.fi"
         
-   end subroutine fmmap_create_integer
+   end subroutine fmmap_create_ik1
 
 
    !********************************************************************************************
-   subroutine fmmap_create_di(p,sh,filemode,filename,lbound)
+   subroutine fmmap_create_ik2(p,sh,filemode,filename,lbound)
    !********************************************************************************************
    !! Creates a mapping to a `integer(kind=fmmap_other_int)` pointer `p`
    !! This routine is not thread safe !
    !********************************************************************************************
-   integer(kind=fmmap_other_int), pointer :: p(..)   ! on output, `p` points to the mapped file
-   integer(kind=fmmap_other_int), pointer :: q(:)
+   integer(ik2), pointer :: p(..)   ! on output, `p` points to the mapped file
+   integer(ik2), pointer :: q(:)
 
    include "fmmap_create.fi"
         
-   end subroutine fmmap_create_di
+   end subroutine fmmap_create_ik2
 
 
    !********************************************************************************************
-   subroutine fmmap_destroy_real(p)
+   subroutine fmmap_destroy_rk1(p)
    !********************************************************************************************
    !! Destroys a mapping to a `real` pointer
    !! (the file is unmapped and closed, and the pointer is nullified)
    !! This routine is not thread safe !
    !********************************************************************************************
-   real, pointer :: p(..)   ! the pointer associated to the mapping to destroy
+   real(rk1), pointer :: p(..)   ! the pointer associated to the mapping to destroy
 
    include "fmmap_destroy.fi"
    
-   end subroutine fmmap_destroy_real
+   end subroutine fmmap_destroy_rk1
    
 
    !********************************************************************************************
-   subroutine fmmap_destroy_dp(p)
+   subroutine fmmap_destroy_rk2(p)
    !********************************************************************************************
    !! Destroys a mapping to a `double precision` pointer
    !! (the file is unmapped and closed, and the pointer is nullified)
    !! This routine is not thread safe !
    !********************************************************************************************
-   double precision, pointer :: p(..)   ! the pointer associated to the mapping to destroy
+   real(rk2), pointer :: p(..)   ! the pointer associated to the mapping to destroy
 
    include "fmmap_destroy.fi"
    
-   end subroutine fmmap_destroy_dp
+   end subroutine fmmap_destroy_rk2
 
 
    !********************************************************************************************
-   subroutine fmmap_destroy_complex(p)
+   subroutine fmmap_destroy_ck1(p)
    !********************************************************************************************
    !! Destroys a mapping to a `complex` pointer
    !! (the file is unmapped and closed, and the pointer is nullified)
    !! This routine is not thread safe !
    !********************************************************************************************
-   complex, pointer :: p(..)   ! the pointer associated to the mapping to destroy
+   complex(rk1), pointer :: p(..)   ! the pointer associated to the mapping to destroy
 
    include "fmmap_destroy.fi"
    
-   end subroutine fmmap_destroy_complex
+   end subroutine fmmap_destroy_ck1
    
 
    !********************************************************************************************
-   subroutine fmmap_destroy_dc(p)
+   subroutine fmmap_destroy_ck2(p)
    !********************************************************************************************
    !! Destroys a mapping to a `double complex` pointer
    !! (the file is unmapped and closed, and the pointer is nullified)
    !! This routine is not thread safe !
    !********************************************************************************************
-   complex(kind=kind(0d0)), pointer :: p(..)   ! the pointer associated to the mapping to destroy
+   complex(rk2), pointer :: p(..)   ! the pointer associated to the mapping to destroy
 
    include "fmmap_destroy.fi"
    
-   end subroutine fmmap_destroy_dc
+   end subroutine fmmap_destroy_ck2
 
 
    !********************************************************************************************
-   subroutine fmmap_destroy_integer(p)
+   subroutine fmmap_destroy_ik1(p)
    !********************************************************************************************
    !! Destroys a mapping to a `integer` pointer
    !! (the file is unmapped and closed, and the pointer is nullified)
    !! This routine is not thread safe !
    !********************************************************************************************
-   integer, pointer :: p(..)   ! the pointer associated to the mapping to destroy
+   integer(ik1), pointer :: p(..)   ! the pointer associated to the mapping to destroy
 
    include "fmmap_destroy.fi"
    
-   end subroutine fmmap_destroy_integer
+   end subroutine fmmap_destroy_ik1
    
 
    !********************************************************************************************
-   subroutine fmmap_destroy_di(p)
+   subroutine fmmap_destroy_ik2(p)
    !********************************************************************************************
    !! Destroys a mapping to a `integer(kind=fmmap_other_int)` pointer
    !! (the file is unmapped and closed, and the pointer is nullified)
    !! This routine is not thread safe !
    !********************************************************************************************
-   integer(kind=fmmap_other_int), pointer :: p(..)   ! the pointer associated to the mapping to destroy
+   integer(ik2), pointer :: p(..)   ! the pointer associated to the mapping to destroy
 
    include "fmmap_destroy.fi"
    
-   end subroutine fmmap_destroy_di
+   end subroutine fmmap_destroy_ik2
    
    
    !********************************************************************************************
