@@ -207,6 +207,7 @@ contains
       write(msg,*) "*** fmmap_destroy_cptr: error code ", stat
       error stop trim(msg)
    end if
+   cptr = c_null_ptr
    
    end subroutine fmmap_destroy_cptr
    

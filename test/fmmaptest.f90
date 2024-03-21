@@ -19,12 +19,20 @@ type(sometype), pointer :: pt(:)
 n = 1000_fmmap_size_t
 
 print*, "Testing FMMAP_SCRATCH:"
-print*, "     "//"1000   1000.0 should be printed:"
 
 call fmmap_create(pr,[n],FMMAP_SCRATCH)
 pr = [(real(i), i=1,n)]
-print*, "     ", size(pr), pr(n)
+if (size(pr) /= n .or. pr(n) /= n) then
+   print*, "FAILED"
+   error stop
+end if
 call fmmap_destroy(pr)
+if (associated(pr)) then
+   print*, "FAILED"
+   error stop
+end if
+
+print*, "PASSED"
 
 print*, "Testing FMMAP_NEW"
 
@@ -32,13 +40,27 @@ call fmmap_create(pi2,[n,n],FMMAP_NEW,"./fun1.bin")
 pi2(:,:) = 1
 pi2(n,n) = -1
 call fmmap_destroy(pi2)
+if (associated(pi2)) then
+   print*, "FAILED"
+   error stop
+end if
+
+print*, "PASSED"
 
 print*, "Testing FMMAP_OLD"
-print*, "     "//"1000   500   2   1   -1   should be printed:"
 
 call fmmap_create(pi3,[n,n/2],FMMAP_OLD,"./fun1.bin")
-print*, "     ", shape(pi3), pi3(1,1,1), pi3(n,n/2,2)
+if (any(shape(pi3) /= [n,n/2,2_fmmap_size_t]) .or. pi3(1,1,1) /= 1 .or. pi3(n,n/2,2) /= -1) then
+   print*, "FAILED"
+   error stop
+end if
 call fmmap_destroy(pi3)
+if (associated(pi3)) then
+   print*, "FAILED"
+   error stop
+end if
+
+print*, "PASSED"
 
 print*, "Testing FMMAP_SCRATCH"
 
@@ -48,11 +70,19 @@ print*, "     "//"creating scratch mapping of", nbytes," bytes"
 call fmmap_create(cptr,nbytes,FMMAP_SCRATCH,"./")
 call c_f_pointer(cptr, pt, [n])
 print*, "     "//"filling the array"
-call random_number( pt(:)%a )
+call random_number( pt(:)%a ); pt(n)%a = 0.5
 pt(:)%i = [(i, i=1,n)]
 pt(:)%str = "Hello"
-print*, "     "//"100000000 <random number> Hello   should be printed:"
-print*, "     ", pt(n)
+if (pt(n)%i /= n .or. trim(pt(n)%str) /= "Hello" .or. pt(n)%a /= 0.5) then
+   print*, "FAILED"
+   error stop
+end if
 call fmmap_destroy(cptr)
+if (c_associated(cptr)) then
+   print*, "FAILED"
+   error stop
+end if
+
+print*, "PASSED"
 
 end program

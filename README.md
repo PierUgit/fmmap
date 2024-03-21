@@ -1,4 +1,4 @@
-# fmmap 0.4.0 : memory mapped files in Fortran
+# fmmap 0.5.0 : memory mapped files in Fortran
 
 ## Introduction
 
@@ -86,8 +86,9 @@ Windows 10 MSYS2 / gcc-gfortran 13
 Linux Debian 11  / Intel icc-ifort 2021 (without fpm)  
 Lubuntu 22.04    / gcc-gfortran 11 (without fpm)
 
-### Issues
+### Known issues
 
+Under Windows MSYS2 the `_WIN32` macro is not defined in gfortran (while it is in gcc). I don"t know how it is under environments others than MSYS2. The fix is to pass it explicitly: `fpm test --flag "-D_WIN32"`
 
 ## Limitations
 
