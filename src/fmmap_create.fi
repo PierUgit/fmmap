@@ -19,7 +19,7 @@
       !! the size of `lbound` must be equal to the rank of `p`
       
    integer, parameter :: ss = storage_size(q)
-   type(fmmap_t) :: x
+   type(c_ptr) :: cptr
    integer(size_t) :: nbytes, n
    integer(size_t), allocatable :: sh___(:), lb(:), ub(:)
    !********************************************************************************************
@@ -32,7 +32,7 @@
       nbytes = fmmap_nbytes( product(sh), ss )
    end if
       
-   call fmmap_create(x,nbytes,filemode,filename)
+   call fmmap_create(cptr,nbytes,filemode,filename)
 
    if (filemode == FMMAP_OLD) then
       n = fmmap_nelems(nbytes, ss )
@@ -45,7 +45,7 @@
    if (present(lbound)) lb = lbound
    ub = lb + sh___ - 1
    
-   call c_f_pointer( x%cptr, q, [product(sh___)] )
+   call c_f_pointer( cptr, q, [product(sh___)] )
    select rank(p)
       rank(1) ; p( lb(1):ub(1) ) => q
       rank(2) ; p( lb(1):ub(1) &
@@ -77,4 +77,3 @@
                  , lb(7):ub(7) ) => q
    end select
    
-   call fmmap_table_push(x)

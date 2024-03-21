@@ -3,7 +3,7 @@ use iso_c_binding
 use fmmap_m
 implicit none
 
-type(fmmap_t) :: x
+type(c_ptr) :: cptr
 double precision, pointer :: pr(:)
 integer, pointer :: pi2(:,:), pi3(:,:,:)
 integer :: i, stat
@@ -45,14 +45,14 @@ print*, "Testing FMMAP_SCRATCH"
 n = 10_fmmap_size_t ** 8
 nbytes = fmmap_nbytes(n,storage_size(pt))
 print*, "     "//"creating scratch mapping of", nbytes," bytes"
-call fmmap_create(x,nbytes,FMMAP_SCRATCH,"./")
-call c_f_pointer(x%cptr, pt, [n])
+call fmmap_create(cptr,nbytes,FMMAP_SCRATCH,"./")
+call c_f_pointer(cptr, pt, [n])
 print*, "     "//"filling the array"
 call random_number( pt(:)%a )
 pt(:)%i = [(i, i=1,n)]
 pt(:)%str = "Hello"
 print*, "     "//"100000000 <random number> Hello   should be printed:"
 print*, "     ", pt(n)
-call fmmap_destroy(x)
+call fmmap_destroy(cptr)
 
 end program

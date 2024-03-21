@@ -1,13 +1,16 @@
-   type(fmmap_t) :: x
+   type(c_ptr) :: cptr
    !********************************************************************************************  
 
+   cptr = c_loc(p)
+
    select rank(p)
-      rank(1) ; call fmmap_table_pull(x,c_loc(p)) ; p => null()
-      rank(2) ; call fmmap_table_pull(x,c_loc(p)) ; p => null()
-      rank(3) ; call fmmap_table_pull(x,c_loc(p)) ; p => null()
-      rank(4) ; call fmmap_table_pull(x,c_loc(p)) ; p => null()
-      rank(5) ; call fmmap_table_pull(x,c_loc(p)) ; p => null()
-      rank(6) ; call fmmap_table_pull(x,c_loc(p)) ; p => null()
-      rank(7) ; call fmmap_table_pull(x,c_loc(p)) ; p => null()
+      rank(1) ; cptr = c_loc(p); p => null()
+      rank(2) ; cptr = c_loc(p); p => null()
+      rank(3) ; cptr = c_loc(p); p => null()
+      rank(4) ; cptr = c_loc(p); p => null()
+      rank(5) ; cptr = c_loc(p); p => null()
+      rank(6) ; cptr = c_loc(p); p => null()
+      rank(7) ; cptr = c_loc(p); p => null()
    end select
-   call fmmap_destroy_cptr(x)
+
+   call fmmap_destroy_cptr(cptr)

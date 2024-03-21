@@ -115,16 +115,18 @@ contains
    
 
    !********************************************************************************************
-   subroutine fmmap_create_cptr(x,nbytes,filemode,filename)
+   subroutine fmmap_create_cptr(cptr,nbytes,filemode,filename)
    !********************************************************************************************
-   !! Creates a "generic" mapping to a C pointer, stored in `x%cptr
+   !! Creates a "generic" mapping to a C pointer
+   !!
+   !! This routine is not thread safe !
    !********************************************************************************************
-   type(fmmap_t),    intent(out)           :: x   !! descriptor
-   integer(size_t)                     :: nbytes 
+   type(c_ptr),    intent(out)           :: cptr   !! descriptor
+   integer(size_t)                       :: nbytes 
       !! input requested size (for filemode 1 or 3), 
       !! or output size of existing file (for filemode 2)
-   integer,          intent(in)            :: filemode !! FILE_SCRATCH, FILE_OLD, or FILE_NEW
-   character(*),     intent(in),  optional :: filename 
+   integer,        intent(in)            :: filemode !! FILE_SCRATCH, FILE_OLD, or FILE_NEW
+   character(*),   intent(in),  optional :: filename 
      !! FILE_OLD or FILE_new: required name of the file (with or without path)
      !! FILE_SCRATCH: name of the path; not required;
      !! - if not present:
@@ -132,6 +134,7 @@ contains
      !!   - WIN32: the Windows temporary path is inquired     
      !! - a processor dependent unique filename is be generated
    
+   type(fmmap_t) :: x
    integer :: i, lu, stat
    character(:), allocatable :: filename___
    character(kind=c_char,len=:), allocatable :: c_filename
@@ -171,25 +174,33 @@ contains
       write(msg,*) "*** fmmap_create_cptr: error code ", stat
       error stop trim(msg)
    end if
+   
+   cptr = x%cptr
+   call fmmap_table_push(x)
                   
    end subroutine fmmap_create_cptr
 
 
    !********************************************************************************************
-   subroutine fmmap_destroy_cptr(x)
+   subroutine fmmap_destroy_cptr(cptr)
    !********************************************************************************************
    !! Destroys a generic mapping 
-   !! (the file is unmapped and closed, and `x%cptr` is set to `c_null_ptr`)
+   !! (the file is unmapped and closed, and `cptr` is set to `c_null_ptr`)
+   !!
+   !! This routine is not thread safe !
    !********************************************************************************************
-   type(fmmap_t), intent(inout) :: x   !! descriptor
+   type(c_ptr), intent(inout) :: cptr
    
+   type(fmmap_t) :: x 
    integer :: i, stat
    character(128) :: msg
    !********************************************************************************************
    
-   if (.not.c_associated(x%cptr)) then
+   if (.not.c_associated(cptr)) then
       error stop "*** fmmap_destroy_cptr: attempt to free a non associated pointer"
    end if
+   
+   call fmmap_table_pull( x, cptr)
       
    stat = c_mmap_destroy( x )
    if (stat /= 0) then

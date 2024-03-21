@@ -29,7 +29,7 @@ type sometype
    character(len=7) :: str
 end type
 type(sometype), pointer :: pt(:)
-type(fmmap_t) :: x 
+type(c_ptr) :: cptr 
 
 
 integer(fmmap_size) :: n, nbytes
@@ -37,10 +37,10 @@ integer(fmmap_size) :: n, nbytes
 ...
 n = 1000
 nbytes = fmmap_nbytes(n, storage_size(pt)) ! converts 1000 elements to a number of bytes
-call fmmap_create(x, nbytes, FMMAP_SCRATCH)    ! anonymous mapping
-call c_f_pointer(x%cptr, pt, [n])          ! conversion to a Fortran pointer
+call fmmap_create(cptr, nbytes, FMMAP_SCRATCH)    ! anonymous mapping
+call c_f_pointer(cptr, pt, [n])            ! conversion to a Fortran pointer
 ...
-call fmmap_destroy(x)                      ! close the temporary file, etc...
+call fmmap_destroy(cptr)                   ! close the temporary file, etc...
 ```
 
 ### intrinsic types usage
@@ -91,5 +91,5 @@ Lubuntu 22.04    / gcc-gfortran 11 (without fpm)
 
 ## Limitations
 
-- The intrinsic type versions of `ffmap_create()` and `ffmap_destroy()` are not thread-safe. 
+- The `ffmap_create()` and `ffmap_destroy()` routines are not thread-safe. 
 - Mapping to an array of a derived type containing allocatable or pointer components is not allowed (well, it's technically possible, but you have to be aware that the memory allocated by these components won't be part of the mapping).
