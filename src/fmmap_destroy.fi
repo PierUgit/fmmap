@@ -1,8 +1,6 @@
    type(c_ptr) :: cptr
    !********************************************************************************************  
 
-   cptr = c_loc(p)
-
    select rank(p)
       rank(1) ; cptr = c_loc(p); p => null()
       rank(2) ; cptr = c_loc(p); p => null()
