@@ -70,6 +70,7 @@ implicit none
       module procedure fmmap_create_rk1, fmmap_create_rk2
       module procedure fmmap_create_ck1, fmmap_create_ck2
       module procedure fmmap_create_ik1, fmmap_create_ik2
+      module procedure fmmap_create_cchar
    end interface
    
    !> Generic routine name that destroys an existing mapping
@@ -79,6 +80,7 @@ implicit none
       module procedure fmmap_destroy_rk1, fmmap_destroy_rk2
       module procedure fmmap_destroy_ck1, fmmap_destroy_ck2
       module procedure fmmap_destroy_ik1, fmmap_destroy_ik2
+      module procedure fmmap_destroy_cchar
    end interface
    
 contains
@@ -297,6 +299,20 @@ contains
 
 
    !********************************************************************************************
+   subroutine fmmap_create_cchar(p,sh,filemode,filename,lbound)
+   !********************************************************************************************
+   !! Creates a mapping to a `integer(kind=fmmap_other_int)` pointer `p`
+   !! This routine is not thread safe !
+   !********************************************************************************************
+   character(kind=c_char), pointer :: p(..)   ! on output, `p` points to the mapped file
+   character(kind=c_char), pointer :: q(:)
+
+   include "fmmap_create.fi"
+        
+   end subroutine fmmap_create_cchar
+
+
+   !********************************************************************************************
    subroutine fmmap_destroy_rk1(p)
    !********************************************************************************************
    !! Destroys a mapping to a `real` pointer
@@ -378,6 +394,20 @@ contains
    include "fmmap_destroy.fi"
    
    end subroutine fmmap_destroy_ik2
+   
+   
+   !********************************************************************************************
+   subroutine fmmap_destroy_cchar(p)
+   !********************************************************************************************
+   !! Destroys a mapping to a `integer(kind=fmmap_other_int)` pointer
+   !! (the file is unmapped and closed, and the pointer is nullified)
+   !! This routine is not thread safe !
+   !********************************************************************************************
+   character(kind=c_char), pointer :: p(..)   ! the pointer associated to the mapping to destroy
+
+   include "fmmap_destroy.fi"
+   
+   end subroutine fmmap_destroy_cchar
    
    
    !********************************************************************************************
