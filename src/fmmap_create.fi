@@ -1,9 +1,9 @@
-   integer(size_t), intent(in)          :: sh(:) 
+   integer(fmmap_size_t), intent(in)         :: shape(:) 
       !! shape of the pointer
       !! - FILE_SCRATCH and FILE_NEW
-      !!   - the size of `sh` must be equal to the rank of `p`
+      !!   - the size of `shape` must be equal to the rank of `p`
       !! - FILE_OLD
-      !!   - the size of `sh` must be equal to the rank of `p` minus 1
+      !!   - the size of `shape` must be equal to the rank of `p` minus 1
       !!   - the size of the last dimension of `p` is determined from the file size
    integer,             intent(in)           :: filemode 
       !! FILE_SCRATCH, FILE_OLD, or FILE_NEW
@@ -14,35 +14,35 @@
      !!   - POSIX: is "." (current directory) by default
      !!   - WIN32: the Windows temporary path is inquired     
      !! - a processor dependent unique filename is be generated
-   integer(size_t), intent(in), optional :: lbound(:)
+   integer(fmmap_size_t), intent(in), optional :: lower(:)
       !! lower bounds of the output pointer;
-      !! the size of `lbound` must be equal to the rank of `p`
+      !! the size of `lower` must be equal to the rank of `p`
       
    integer, parameter :: ss = storage_size(q)
    type(c_ptr) :: cptr
-   integer(size_t) :: nbytes, n
-   integer(size_t), allocatable :: sh___(:), lb(:), ub(:)
+   integer(fmmap_size_t) :: nbytes, n
+   integer(fmmap_size_t), allocatable :: sh___(:), lb(:), ub(:)
    !********************************************************************************************
    
    if (rank(p) < 1 .or. rank(p) > 7) error stop msg0//msg1
    if (filemode == FMMAP_OLD) then
-      if (size(sh) /= rank(p)-1) error stop msg0//msg2
+      if (size(shape) /= rank(p)-1) error stop msg0//msg2
    else
-      if (size(sh) /= rank(p)  ) error stop msg0//msg2
-      nbytes = fmmap_nbytes( product(sh), ss )
+      if (size(shape) /= rank(p)  ) error stop msg0//msg2
+      nbytes = fmmap_nbytes( product(shape), ss )
    end if
       
    call fmmap_create(cptr,nbytes,filemode,filename)
 
    if (filemode == FMMAP_OLD) then
       n = fmmap_nelems(nbytes, ss )
-      sh___ = [ sh, n / product(sh) ]
-      if (sh___(rank(p)) * product(sh) /= n) error stop msg0//msg3 
+      sh___ = [ shape, n / product(shape) ]
+      if (sh___(rank(p)) * product(shape) /= n) error stop msg0//msg3 
    else
-      sh___ = sh      
+      sh___ = shape      
    end if
-   allocate( lb(rank(p)), source=1_size_t )
-   if (present(lbound)) lb = lbound
+   allocate( lb(rank(p)), source=1_fmmap_size_t )
+   if (present(lower)) lb = lower
    ub = lb + sh___ - 1
    
    call c_f_pointer( cptr, q, [product(sh___)] )
