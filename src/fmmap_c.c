@@ -118,13 +118,20 @@ int c_mmap_destroy( fmmap_t* x) {
     int stat;
     
 #ifdef _WIN32
-    stat = (int)FlushViewOfFile(x->ptr,0); if (stat == 0) return 11;
+    if (x->filemode != 1) {
+        stat = (int)FlushViewOfFile(x->ptr,0)
+        if (stat == 0) return 11;
+    }
     stat = (int)UnmapViewOfFile(x->ptr);   if (stat == 0) return 12;
-    stat = (int)CloseHandle(x->mapdes);    if (stat == 0) return 14;
-	stat = (int)CloseHandle(x->filedes);   if (stat == 0) return 13;
+    stat = (int)CloseHandle(x->mapdes);    if (stat == 0) return 13;
+	stat = (int)CloseHandle(x->filedes);   if (stat == 0) return 14;
 #else
-    stat = munmap(x->ptr, (size_t)x->n); if (stat != 0) return 11;
-    stat = close(x->filedes);            if (stat != 0) return 12;
+    if (x->filemode != 1) {
+        stat = msync(x->ptr, (size_t)x->n, MS_SYNC);
+        if (stat == 0) return 11;
+    }
+    stat = munmap(x->ptr, (size_t)x->n); if (stat != 0) return 12;
+    stat = close(x->filedes);            if (stat != 0) return 14;
 #endif
 
 	return 0;
