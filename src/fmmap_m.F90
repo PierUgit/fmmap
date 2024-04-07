@@ -7,7 +7,7 @@ implicit none
 
    private
    public :: fmmap_size_t, fmmap_t, fmmap_nbytes, fmmap_nelems
-   public :: fmmap_create, fmmap_destroy
+   public :: fmmap_create, fmmap_destroy, fmmap_writeback
    public :: FMMAP_SCRATCH, FMMAP_OLD, FMMAP_NEW
 
    !> integer kind used for the sizes and and number of bytes or elements
@@ -31,6 +31,7 @@ implicit none
 ! posix assumed
       integer(c_int)      :: cfiledes
 #endif
+      logical(c_bool)     :: cprivate
       logical(c_bool)     :: used = .true.
    end type
    
@@ -59,6 +60,11 @@ implicit none
          type(fmmap_t),                intent(inout) :: x 
       end function c_mmap_destroy
       
+      integer(c_int) function c_mmap_writeback( x ) BIND(C)
+         import :: c_int, c_char, fmmap_t
+         type(fmmap_t),                intent(inout) :: x 
+      end function c_mmap_writeback
+
    end interface
    
    !> Generic routine name that creates either a generic mapping to a C pointer or a mapping
@@ -81,6 +87,10 @@ implicit none
       module procedure fmmap_destroy_ik1, fmmap_destroy_ik2
       module procedure fmmap_destroy_cchar
    end interface
+   
+   interface fmmap_writeback
+      module procedure fmmap_writeback_cptr
+   end interface fmmap_writeback
    
 contains
    
@@ -116,7 +126,7 @@ contains
    
 
    !********************************************************************************************
-   subroutine fmmap_create_cptr(cptr,nbytes,filemode,filename)
+   subroutine fmmap_create_cptr(cptr,nbytes,filemode,filename,private)
    !********************************************************************************************
    !! Creates a "generic" mapping to a C pointer
    !!
@@ -135,6 +145,9 @@ contains
       !!   - POSIX: is "." (current directory) by default
       !!   - WIN32: the Windows temporary path is inquired     
       !! - a processor dependent unique filename is be generated
+   logical,               intent(in),  optional :: private
+      !! if .true., all the changes made to the mapped file are in memory only
+      !! and are not written back to the file.
    
    type(fmmap_t) :: x
    integer :: i, lu, stat
@@ -148,6 +161,7 @@ contains
    end if
    
    x%cfilemode = filemode
+   x%cprivate  = .false. ; if (present(private)) x%cprivate = private
    x%used      = .true.
    
    if (filemode == FMMAP_SCRATCH) then
@@ -202,7 +216,7 @@ contains
       error stop "*** fmmap_destroy_cptr: attempt to free a non associated pointer"
    end if
    
-   call fmmap_table_pull( x, cptr)
+   call fmmap_table_pull( x, cptr )
       
    stat = c_mmap_destroy( x )
    if (stat /= 0) then
@@ -215,7 +229,38 @@ contains
    
    
    !********************************************************************************************
-   subroutine fmmap_create_rk1(p,shape,filemode,filename,lower)
+   subroutine fmmap_writeback_cptr(cptr)
+   !********************************************************************************************
+   !! 
+   !********************************************************************************************
+   type(c_ptr),  intent(inout) :: cptr   !! C pointer to the mapped file
+   
+   type(fmmap_t) :: x
+   integer :: i, lu, stat
+   character(:), allocatable :: filename___
+   character(kind=c_char,len=:), allocatable :: c_filename
+   character(128) :: msg
+   !********************************************************************************************
+
+   if (.not.c_associated(cptr)) then
+      error stop "*** fmmap_writeback_cptr: attempt to writeback a non associated pointer"
+   end if
+   
+   call fmmap_table_pull( x, cptr )
+   if (.not.x%cprivate) then
+      error stop "*** fmmap_writeback_cptr: attempt to writeback a non private mapping"
+   end if
+      
+   stat = c_mmap_writeback( x )
+   
+   cptr = x%cptr
+   call fmmap_table_push(x) 
+
+   end subroutine fmmap_writeback_cptr
+
+
+   !********************************************************************************************
+   subroutine fmmap_create_rk1(p,shape,filemode,filename,lower,private)
    !********************************************************************************************
    !! Creates a mapping to a `real` pointer `p`
    !! This routine is not thread safe !
@@ -229,7 +274,7 @@ contains
 
 
    !********************************************************************************************
-   subroutine fmmap_create_rk2(p,shape,filemode,filename,lower)
+   subroutine fmmap_create_rk2(p,shape,filemode,filename,lower,private)
    !********************************************************************************************
    !! Creates a mapping to a `double precision` pointer `p`
    !! This routine is not thread safe !
@@ -243,7 +288,7 @@ contains
 
 
    !********************************************************************************************
-   subroutine fmmap_create_ck1(p,shape,filemode,filename,lower)
+   subroutine fmmap_create_ck1(p,shape,filemode,filename,lower,private)
    !********************************************************************************************
    !! Creates a mapping to a `complex` pointer `p`
    !! This routine is not thread safe !
@@ -257,7 +302,7 @@ contains
 
 
    !********************************************************************************************
-   subroutine fmmap_create_ck2(p,shape,filemode,filename,lower)
+   subroutine fmmap_create_ck2(p,shape,filemode,filename,lower,private)
    !********************************************************************************************
    !! Creates a mapping to a `double complex` pointer `p`
    !! This routine is not thread safe !
@@ -271,7 +316,7 @@ contains
 
 
    !********************************************************************************************
-   subroutine fmmap_create_ik1(p,shape,filemode,filename,lower)
+   subroutine fmmap_create_ik1(p,shape,filemode,filename,lower,private)
    !********************************************************************************************
    !! Creates a mapping to a `integer` pointer `p`
    !! This routine is not thread safe !
@@ -285,7 +330,7 @@ contains
 
 
    !********************************************************************************************
-   subroutine fmmap_create_ik2(p,shape,filemode,filename,lower)
+   subroutine fmmap_create_ik2(p,shape,filemode,filename,lower,private)
    !********************************************************************************************
    !! Creates a mapping to a `integer(kind=fmmap_other_int)` pointer `p`
    !! This routine is not thread safe !
@@ -299,7 +344,7 @@ contains
 
 
    !********************************************************************************************
-   subroutine fmmap_create_cchar(p,shape,filemode,filename,lower)
+   subroutine fmmap_create_cchar(p,shape,filemode,filename,lower,private)
    !********************************************************************************************
    !! Creates a mapping to a `integer(kind=fmmap_other_int)` pointer `p`
    !! This routine is not thread safe !
@@ -410,6 +455,87 @@ contains
    end subroutine fmmap_destroy_cchar
    
    
+   !********************************************************************************************
+   subroutine fmmap_writeback_rk1(p)
+   !********************************************************************************************
+   !! 
+   !********************************************************************************************
+   real(rk1), pointer :: p(..)   !! 
+   
+   real(rk1), pointer :: q(:)
+   type(c_ptr) :: cptr
+   integer, allocatable :: lb(:), ub(:)
+   !********************************************************************************************
+
+   select rank(p)
+      rank(1) 
+         lb = lbound(p); ub = ubound(p)
+         cptr = c_loc(p)
+         call fmmap_writeback_cptr(cptr)
+         call c_f_pointer( cptr, q, [size(p,kind=fmmap_size_t)] )
+         p( lb(1):ub(1) ) => q
+      rank(2)
+         lb = lbound(p); ub = ubound(p)
+         cptr = c_loc(p)
+         call fmmap_writeback_cptr(cptr)
+         call c_f_pointer( cptr, q, [size(p,kind=fmmap_size_t)] )
+         p( lb(1):ub(1) &
+          , lb(2):ub(2) ) => q
+      rank(3)
+         lb = lbound(p); ub = ubound(p)
+         cptr = c_loc(p)
+         call fmmap_writeback_cptr(cptr)
+         call c_f_pointer( cptr, q, [size(p,kind=fmmap_size_t)] )
+         p( lb(1):ub(1) &
+          , lb(2):ub(2) &
+          , lb(3):ub(3) ) => q
+      rank(4)
+         lb = lbound(p); ub = ubound(p)
+         cptr = c_loc(p)
+         call fmmap_writeback_cptr(cptr)
+         call c_f_pointer( cptr, q, [size(p,kind=fmmap_size_t)] )
+         p( lb(1):ub(1) &
+          , lb(2):ub(2) &
+          , lb(3):ub(3) &
+          , lb(4):ub(4) ) => q
+      rank(5)
+         lb = lbound(p); ub = ubound(p)
+         cptr = c_loc(p)
+         call fmmap_writeback_cptr(cptr)
+         call c_f_pointer( cptr, q, [size(p,kind=fmmap_size_t)] )
+         p( lb(1):ub(1) &
+          , lb(2):ub(2) &
+          , lb(3):ub(3) &
+          , lb(4):ub(4) &
+          , lb(5):ub(5) ) => q
+      rank(6)
+         lb = lbound(p); ub = ubound(p)
+         cptr = c_loc(p)
+         call fmmap_writeback_cptr(cptr)
+         call c_f_pointer( cptr, q, [size(p,kind=fmmap_size_t)] )
+         p( lb(1):ub(1) &
+          , lb(2):ub(2) &
+          , lb(3):ub(3) &
+          , lb(4):ub(4) &
+          , lb(5):ub(5) &
+          , lb(6):ub(6) ) => q
+      rank(7)
+         lb = lbound(p); ub = ubound(p)
+         cptr = c_loc(p)
+         call fmmap_writeback_cptr(cptr)
+         call c_f_pointer( cptr, q, [size(p,kind=fmmap_size_t)] )
+         p( lb(1):ub(1) &
+          , lb(2):ub(2) &
+          , lb(3):ub(3) &
+          , lb(4):ub(4) &
+          , lb(5):ub(5) &
+          , lb(6):ub(6) &
+          , lb(7):ub(7) ) => q
+   end select
+
+   end subroutine fmmap_writeback_rk1
+
+
    !********************************************************************************************
    subroutine fmmap_table_push(x)
    !********************************************************************************************

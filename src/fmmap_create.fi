@@ -17,6 +17,9 @@
    integer(fmmap_size_t), intent(in), optional :: lower(:)
       !! lower bounds of the output pointer;
       !! the size of `lower` must be equal to the rank of `p`
+   logical,               intent(in), optional :: private
+      !! if .true., all the changes made to the mapped file are in memory only
+      !! and are not written back to the file.
       
    integer, parameter :: ss = storage_size(q)
    type(c_ptr) :: cptr
@@ -32,7 +35,7 @@
       nbytes = fmmap_nbytes( product(shape), ss )
    end if
       
-   call fmmap_create(cptr,nbytes,filemode,filename)
+   call fmmap_create(cptr,nbytes,filemode,filename,private)
 
    if (filemode == FMMAP_OLD) then
       n = fmmap_nelems(nbytes, ss )
