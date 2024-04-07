@@ -12,11 +12,9 @@
 #include <WinDef.h>
 #include <WinNT.h>
 #include <winbase.h>
-#define FILEHANDLE HANDLE*
 #else
 // posix assumed
 #include <sys/mman.h>
-#define FILEHANDLE int*
 #endif
 
 /*
