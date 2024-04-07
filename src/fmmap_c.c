@@ -120,11 +120,18 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
 
 
 
-int c_mmap_destroy( fmmap_t* x) {
+int c_mmap_destroy( fmmap_t* x, const bool wb ) {
 
     int stat;
+    size_t statwrt;
     
 #ifdef _WIN32
+    if (wb) {
+        statwrt = fwrite(x->ptr, (size_t)1, (size_t)x->n, x->filedes);
+            if (statwrt != (size_t)x->n) return 20;
+        stat = fsync(x->filedes);   // not sure it's needed...
+            if (stat != 0) return 21; 
+    }
     if (x->filemode != 1) {
         stat = (int)FlushViewOfFile(x->ptr,0)
             if (stat == 0) return 11;
@@ -136,6 +143,12 @@ int c_mmap_destroy( fmmap_t* x) {
 	stat = (int)CloseHandle(x->filedes);
 	    if (stat == 0) return 14;
 #else
+    if (wb) {
+        statwrt = write(x->filedes, x->ptr, (size_t)x->n);
+            if (statwrt != (size_t)x->n) return 15;
+        stat = fsync(x->filedes);   // not sure it's needed...
+            if (stat != 0) return 16; 
+    }
     if (x->filemode != 1) {
         stat = msync(x->ptr, (size_t)x->n, MS_SYNC);
         if (stat != 0) return 11;
@@ -149,38 +162,3 @@ int c_mmap_destroy( fmmap_t* x) {
 	return 0;
 }
 
-
-
-int c_mmap_writeback( fmmap_t* x ) {
-	
-    int stat;
-    
-#ifdef _WIN32
-    size_t statwrt = (int)fwrite(x->ptr, (size_t)1, (size_t)x->n, x->filedes);
-        if (statwrt != (size_t)x->n) return 20;
-    stat = fsync(x->filedes);   // not sure it's needed...
-        if (stat != 0) return 21; 
-    stat = (int)UnmapViewOfFile(x->ptr);
-        if (stat == 0) return 22;
-	x->ptr = MapViewOfFile( x->mapdes
-	                      , FILE_MAP_ALL_ACCESS | FILE_MAP_COPY
-	                      , 0, 0, 0);        
-    if (x->ptr == NULL) return 23;
-#else
-    size_t statwrt = write(x->filedes, x->ptr, (size_t)x->n);
-        if (statwrt != (size_t)x->n) return 20;
-    stat = fsync(x->filedes);   // not sure it's needed...
-        if (stat != 0) return 21; 
-    stat = munmap(x->ptr, (size_t)x->n);
-        if (stat != 0) return 22;
-    x->ptr = mmap ( NULL                        
-                  , (size_t)x->n                  
-                  , PROT_READ | PROT_WRITE      
-                  , MAP_PRIVATE | MAP_NORESERVE  
-                  , x->filedes                         
-                  , 0 );
-    if (x->ptr == MAP_FAILED) return 23;
-#endif
-
-    return 0;
-}

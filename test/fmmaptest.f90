@@ -122,13 +122,7 @@ if (pi1(n/2) /= 1) then
    error stop
 end if
 pi1(n/2) = 42
-call fmmap_writeback(cptr)
-call c_f_pointer(cptr,pi1,[n])
-if (pi1(n/2) /= 42) then
-   print*, "FAILED"
-   error stop
-end if
-call fmmap_destroy(cptr)
+call fmmap_destroy(cptr,writeback=.true.)
 call fmmap_create(cptr,nbytes,FMMAP_OLD,"./fun1.bin")
 call c_f_pointer(cptr,pi1,[n])
 if (pi1(n/2) /= 42) then
