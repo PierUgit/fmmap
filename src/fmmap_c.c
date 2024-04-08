@@ -129,11 +129,11 @@ int c_mmap_destroy( fmmap_t* x, const bool wb ) {
     if (wb) {
         statwrt = fwrite(x->ptr, (size_t)1, (size_t)x->n, x->filedes);
             if (statwrt != (size_t)x->n) return 20;
-        stat = fsync(x->filedes);   // not sure it's needed...
-            if (stat != 0) return 21; 
+        //stat = fsync(x->filedes);   // not sure it's needed...
+        //    if (stat != 0) return 21; 
     }
     if (x->filemode != 1) {
-        stat = (int)FlushViewOfFile(x->ptr,0)
+        stat = (int)FlushViewOfFile(x->ptr,0);
             if (stat == 0) return 11;
     }
     stat = (int)UnmapViewOfFile(x->ptr);

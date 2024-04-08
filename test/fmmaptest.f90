@@ -8,6 +8,7 @@ double precision, pointer :: pr(:)
 integer, pointer :: pi1(:), pi2(:,:), pi3(:,:,:)
 integer :: i, stat, lu
 integer(fmmap_size_t) :: n, n1, n2, n3, nbytes
+character(len=:), allocatable :: filename
 
 type sometype
    integer :: i
@@ -20,6 +21,11 @@ n1 = 1000_fmmap_size_t
 n2 = 10_fmmap_size_t ** 7
 n3 = 2 * 10_fmmap_size_t ** 9
 
+#ifdef _WIN32
+filename = "C:\Temp\fun1.bin"
+#else
+filename = "./fun1.bin"
+#endif
 
 print*, "Testing dp/rank1/FMMAP_SCRATCH:"
 
@@ -53,7 +59,7 @@ print*, "PASSED"
 
 print*, "Testing int/rank2/FMMAP_NEW"
 
-call fmmap_create(pi2,[n1,n1],FMMAP_NEW,"./fun1.bin")
+call fmmap_create(pi2,[n1,n1],FMMAP_NEW,filename)
 pi2(:,:) = 1
 pi2(n1,n1) = -1
 call fmmap_destroy(pi2)
@@ -67,7 +73,7 @@ print*, "PASSED"
 
 print*, "Testing int/rank3/FMMAP_OLD"
 
-call fmmap_create(pi3,[n1,n1/2],FMMAP_OLD,"./fun1.bin")
+call fmmap_create(pi3,[n1,n1/2],FMMAP_OLD,filename)
 if (any(shape(pi3) /= [n1,n1/2,2_fmmap_size_t]) .or. pi3(1,1,1) /= 1 .or. pi3(n1,n1/2,2) /= -1) then
    print*, "FAILED"
    error stop
@@ -106,7 +112,7 @@ print*, "PASSED"
 
 print*, "Testing cptr/rank1/FMMAP_OLD/private/writeback"
 
-call fmmap_create(cptr,nbytes,FMMAP_OLD,"./fun1.bin",private=.true.)
+call fmmap_create(cptr,nbytes,FMMAP_OLD,filename,private=.true.)
 n = fmmap_nelems(nbytes,storage_size(pi1))
 call c_f_pointer(cptr,pi1,[n])
 if (pi1(n) /= -1) then
@@ -115,7 +121,7 @@ if (pi1(n) /= -1) then
 end if
 pi1(n/2) = 42
 call fmmap_destroy(cptr)
-call fmmap_create(cptr,nbytes,FMMAP_OLD,"./fun1.bin",private=.true.)
+call fmmap_create(cptr,nbytes,FMMAP_OLD,filename,private=.true.)
 call c_f_pointer(cptr,pi1,[n])
 if (pi1(n/2) /= 1) then
    print*, "FAILED"
@@ -123,7 +129,7 @@ if (pi1(n/2) /= 1) then
 end if
 pi1(n/2) = 42
 call fmmap_destroy(cptr,writeback=.true.)
-call fmmap_create(cptr,nbytes,FMMAP_OLD,"./fun1.bin")
+call fmmap_create(cptr,nbytes,FMMAP_OLD,filename)
 call c_f_pointer(cptr,pi1,[n])
 if (pi1(n/2) /= 42) then
    print*, "FAILED"
@@ -134,7 +140,7 @@ call fmmap_destroy(cptr)
 print*, "PASSED"
 
 
-open(newunit=lu, file="./fun1.bin", status="OLD")
+open(newunit=lu, file=filename, status="OLD")
 close(lu,status="DELETE")
 
 end program
