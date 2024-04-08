@@ -8,7 +8,7 @@ double precision, pointer :: pr(:)
 integer, pointer :: pi1(:), pi2(:,:), pi3(:,:,:)
 integer :: i, stat, lu
 integer(fmmap_size_t) :: n, n1, n2, n3, nbytes
-character(len=:), allocatable :: filename
+character(len=:), allocatable :: filename, pathname
 
 type sometype
    integer :: i
@@ -23,8 +23,10 @@ n3 = 2 * 10_fmmap_size_t ** 9
 
 #ifdef _WIN32
 filename = "C:\Temp\fun1.bin"
+pathname = "C:\Temp\"
 #else
 filename = "./fun1.bin"
+pathname = "./"
 #endif
 
 print*, "Testing dp/rank1/FMMAP_SCRATCH:"
@@ -91,7 +93,7 @@ print*, "Testing cptr/rank1/FMMAP_SCRATCH"
 
 nbytes = fmmap_nbytes(n2,storage_size(pt))
 print*, "     "//"creating scratch mapping of", nbytes," bytes"
-call fmmap_create(cptr,nbytes,FMMAP_SCRATCH,"./")
+call fmmap_create(cptr,nbytes,FMMAP_SCRATCH,pathname)
 call c_f_pointer(cptr, pt, [n2])
 print*, "     "//"filling the array"
 call random_number( pt(:)%a ); pt(n2)%a = 0.5
@@ -116,7 +118,7 @@ call fmmap_create(cptr,nbytes,FMMAP_OLD,filename,private=.true.)
 n = fmmap_nelems(nbytes,storage_size(pi1))
 call c_f_pointer(cptr,pi1,[n])
 if (pi1(n) /= -1) then
-   print*, "FAILED"
+   print*, "FAILED 1"
    error stop
 end if
 pi1(n/2) = 42
@@ -124,7 +126,7 @@ call fmmap_destroy(cptr)
 call fmmap_create(cptr,nbytes,FMMAP_OLD,filename,private=.true.)
 call c_f_pointer(cptr,pi1,[n])
 if (pi1(n/2) /= 1) then
-   print*, "FAILED"
+   print*, "FAILED 2", pi1(n/2)
    error stop
 end if
 pi1(n/2) = 42
@@ -132,7 +134,7 @@ call fmmap_destroy(cptr,writeback=.true.)
 call fmmap_create(cptr,nbytes,FMMAP_OLD,filename)
 call c_f_pointer(cptr,pi1,[n])
 if (pi1(n/2) /= 42) then
-   print*, "FAILED"
+   print*, "FAILED 3"
    error stop
 end if
 call fmmap_destroy(cptr)
