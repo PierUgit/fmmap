@@ -56,9 +56,7 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
             strcpy(path,filename);
         }
 		GetTempFileNameA(path,"fmm",0u,tmpname);
-		char name[strlen(tmpname)];
-		strcpy(name,tmpname);
- 		x->filedes = fopen(name,"wb+");                          
+ 		x->filedes = fopen(tmpname,"wb+");                          
             if (x->filedes == NULL) return 1;
 		stat = _fseeki64(x->filedes, (__int64)(x->n-1), SEEK_SET);
             if (stat != 0)   return 2;
@@ -67,37 +65,33 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
             if (statwrt != 1)   return 3;
 		stat = fclose(x->filedes);                               
             if (stat != 0)   return 4;
-  		x->filedes = CreateFileA(name,GENERIC_READ | GENERIC_WRITE,0,NULL,OPEN_EXISTING
+  		x->filedes = CreateFileA(tmpname,GENERIC_READ | GENERIC_WRITE,0,NULL,OPEN_EXISTING
                                 ,FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE, NULL);
 		    if (x->filedes == INVALID_HANDLE_VALUE) return 5;
     } else {
-        char name[9];
-        strcpy(name,filename);
-		x->filedes = CreateFileA(name,GENERIC_READ | GENERIC_WRITE,0,NULL,OPEN_EXISTING
+		x->filedes = CreateFileA(filename,GENERIC_READ | GENERIC_WRITE,0,NULL,OPEN_EXISTING
                                 ,FILE_ATTRIBUTE_NORMAL, NULL);
 		if (x->filedes == INVALID_HANDLE_VALUE) return 7;
 	}
 	x->mapdes = CreateFileMappingA(x->filedes,NULL,PAGE_READWRITE,0,0,NULL); 
         if (x->mapdes == NULL)   return 8;
 	x->ptr = MapViewOfFile( x->mapdes
-	                      , FILE_MAP_ALL_ACCESS | (x->private ? FILE_MAP_COPY : 0)
+	                      , (x->private ? FILE_MAP_COPY : FILE_MAP_ALL_ACCESS)
 	                      , 0, 0, 0);        
     if (x->ptr == NULL) return 9;
 #else
     if (x->filemode == 1) {
-        char path[1024];
+        char tmpname[1024];
 		if (strlen(filename) == 0) {
-            strcpy(path,"./");
+            strcpy(tmpname,"./");
         } else {
-            strcpy(path,filename);
-            strcat(path,"/");
+            strcpy(tmpname,filename);
+            strcat(tmpname,"/");
         }
-        strcat(path,"fmm.tmpXXXXXX");
-        char name[strlen(path)];
-        strcpy(name,path);
-        x->filedes = mkstemp(name);
+        strcat(tmpname,"fmm.tmpXXXXXX");
+        x->filedes = mkstemp(tmpname);
             if (x->filedes <= 0)  return 1;
-        stat = unlink(name);
+        stat = unlink(tmpname);
             if (stat != 0) return 2;
         stat = ftruncate(x->filedes, x->n);
             if (stat != 0) return 3;
@@ -127,13 +121,16 @@ int c_mmap_destroy( fmmap_t* x, const bool wb ) {
     
 #ifdef _WIN32
     if (wb) {
-        statwrt = fwrite(x->ptr, (size_t)1, (size_t)x->n, x->filedes);
-            if (statwrt != (size_t)x->n) return 20;
-        //stat = fsync(x->filedes);   // not sure it's needed...
-        //    if (stat != 0) return 21; 
+        void* ptr2 = MapViewOfFile( x->mapdes
+	                             , FILE_MAP_ALL_ACCESS
+	                             , 0, 0, 0);
+        if (ptr2 == NULL) return 15;
+        memcpy(ptr2,x->ptr,(size_t)x->n);
+        stat = (int)UnmapViewOfFile(ptr2);
+            if (stat == 0) return 16;
     }
     if (x->filemode != 1) {
-        stat = (int)FlushViewOfFile(x->ptr,0);
+        stat = (int)FlushViewOfFile(x->ptr,0);   // not sure it's needed
             if (stat == 0) return 11;
     }
     stat = (int)UnmapViewOfFile(x->ptr);

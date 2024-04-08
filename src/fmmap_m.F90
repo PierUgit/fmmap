@@ -21,18 +21,18 @@ implicit none
    
    type, bind(C) :: fmmap_t   ! descriptor
       private
-      type(c_ptr), public   :: cptr = c_null_ptr
-      integer(fmmap_size_t) :: cn
-      integer(c_int)        :: cfilemode
+      type(c_ptr), public    :: cptr = c_null_ptr
+      integer(fmmap_size_t)  :: cn
+      integer(c_int)         :: cfilemode
 #ifdef _WIN32
-      type(c_ptr)         :: cfiledes = c_null_ptr;
-      type(c_ptr)         :: cmapdes  = c_null_ptr
+      type(c_ptr)            :: cfiledes = c_null_ptr
+      type(c_ptr)            :: cmapdes  = c_null_ptr
 #else
 ! posix assumed
-      integer(c_int)      :: cfiledes
+      integer(c_int)         :: cfiledes
 #endif
-      logical(c_bool)     :: cprivate
-      logical(c_bool)     :: used = .true.
+      logical(c_bool)        :: cprivate
+      logical(c_bool)        :: used = .true.
    end type
    
    type(fmmap_t), allocatable :: table(:)
