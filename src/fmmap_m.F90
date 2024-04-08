@@ -242,7 +242,7 @@ contains
    !********************************************************************************************
    subroutine fmmap_create_rk1(p,shape,filemode,filename,lower,copyonwrite)
    !********************************************************************************************
-   !! Opens a file and creates a mapping to a `real(real32)` pointer `p`
+   !! Opens a file and creates a mapping to a `real(real32)` pointer `p`  
    !! This routine is not thread safe !
    !********************************************************************************************
    real(rk1), pointer :: p(..)   !! on output, `p` points to the mapped file
@@ -256,7 +256,7 @@ contains
    !********************************************************************************************
    subroutine fmmap_create_rk2(p,shape,filemode,filename,lower,copyonwrite)
    !********************************************************************************************
-   !! Opens a file and creates a mapping to a `real(real64)` pointer `p`
+   !! Opens a file and creates a mapping to a `real(real64)` pointer `p`  
    !! This routine is not thread safe !
    !********************************************************************************************
    real(rk2), pointer :: p(..)   !! on output, `p` points to the mapped file
@@ -415,8 +415,8 @@ contains
    !********************************************************************************************
    subroutine fmmap_destroy_ik2(p,writeback)
    !********************************************************************************************
-   !! Destroys a mapping to an `integer(int64)` pointer and closes the file
-   !! 
+   !! Destroys a mapping to an `integer(int64)` pointer and closes the file  
+   !!  
    !! This routine is not thread safe !
    !********************************************************************************************
    integer(ik2), pointer :: p(..)   
@@ -430,7 +430,7 @@ contains
    !********************************************************************************************
    subroutine fmmap_destroy_cchar(p,writeback)
    !********************************************************************************************
-   !! Destroys a mapping to a `character(kind=c_char)` pointer and closes the file
+   !! Destroys a mapping to a `character(kind=c_char)` pointer and closes the file  
    !! 
    !! This routine is not thread safe !
    !********************************************************************************************
