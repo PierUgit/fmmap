@@ -37,7 +37,7 @@ typedef struct {
 #else
     int       filedes;
 #endif
-    bool      private;
+    bool      cow;
     bool      used;
 } fmmap_t;
 
@@ -76,7 +76,7 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
 	x->mapdes = CreateFileMappingA(x->filedes,NULL,PAGE_READWRITE,0,0,NULL); 
         if (x->mapdes == NULL)   return 8;
 	x->ptr = MapViewOfFile( x->mapdes
-	                      , (x->private ? FILE_MAP_COPY : FILE_MAP_ALL_ACCESS)
+	                      , (x->cow ? FILE_MAP_COPY : FILE_MAP_ALL_ACCESS)
 	                      , 0, 0, 0);        
     if (x->ptr == NULL) return 9;
 #else
@@ -103,7 +103,7 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
     x->ptr = mmap ( NULL                        
                   , (size_t)x->n                  
                   , PROT_READ | PROT_WRITE      
-                  , (x->private ? MAP_PRIVATE : MAP_SHARED) | MAP_NORESERVE  
+                  , (x->cow ? MAP_PRIVATE : MAP_SHARED) | MAP_NORESERVE  
                   , x->filedes                         
                   , 0 );
     if (x->ptr == MAP_FAILED) return 5;

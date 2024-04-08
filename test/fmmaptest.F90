@@ -75,7 +75,7 @@ print*, "PASSED"
 
 print*, "Testing int/rank3/FMMAP_OLD"
 
-call fmmap_create(pi3,[n1,n1/2],FMMAP_OLD,filename)
+call fmmap_create(pi3,[n1,n1/2,-1_fmmap_size_t],FMMAP_OLD,filename)
 if (any(shape(pi3) /= [n1,n1/2,2_fmmap_size_t]) .or. pi3(1,1,1) /= 1 .or. pi3(n1,n1/2,2) /= -1) then
    print*, "FAILED"
    error stop
@@ -112,9 +112,9 @@ end if
 print*, "PASSED"
 
 
-print*, "Testing cptr/rank1/FMMAP_OLD/private/writeback"
+print*, "Testing cptr/rank1/FMMAP_OLD/copyonwrite/writeback"
 
-call fmmap_create(cptr,nbytes,FMMAP_OLD,filename,private=.true.)
+call fmmap_create(cptr,nbytes,FMMAP_OLD,filename,copyonwrite=.true.)
 n = fmmap_nelems(nbytes,storage_size(pi1))
 call c_f_pointer(cptr,pi1,[n])
 if (pi1(n) /= -1) then
@@ -123,7 +123,7 @@ if (pi1(n) /= -1) then
 end if
 pi1(n/2) = 42
 call fmmap_destroy(cptr)
-call fmmap_create(cptr,nbytes,FMMAP_OLD,filename,private=.true.)
+call fmmap_create(cptr,nbytes,FMMAP_OLD,filename,copyonwrite=.true.)
 call c_f_pointer(cptr,pi1,[n])
 if (pi1(n/2) /= 1) then
    print*, "FAILED 2", pi1(n/2)

@@ -1,4 +1,6 @@
    logical,     intent(in)   , optional :: writeback
+      !! if .true., the changes in memory in the copyonwrite mode are written back to the file
+
    
    type(c_ptr) :: cptr
    !********************************************************************************************  
