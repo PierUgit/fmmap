@@ -2,11 +2,13 @@
 
 ## Introduction
 
-These routines provide *some* of the features of the C posix or Windows memory mapped files under a simple and unique Fortran interface.
+These routines provide *some* of the features of the posix or Windows memory mapped files under a simple and unique Fortran interface.
 
-2 usages:
-- allocating arrays that are potentially bigger the RAM+swap size, and which are backed in a temporary file (anonymous mapping)
+2 main usages:
+- allocating arrays that are potentially bigger the RAM+swap size, and which are backed by a temporary file
 - opening existing files or creating new files, and mapping them to an array
+
+Private mapping is possible, with optional write-back of the modifications to the file. Private mapping is useful when one doesn't want to modify the file on disk, or when one wants to work only in memory and decide when to update the file (or not).
 
 ## Usage
 
@@ -74,7 +76,7 @@ call fmmap_destroy(pr)
 
 ## Compilation
 
-The repository has an fpm (Fortran Package Manager) structure. A macro `POSIX` or `WIN32` must be passed depending on the OS:
+The repository has an fpm (Fortran Package Manager) structure:
 ```
 fpm test
 ```
@@ -88,7 +90,7 @@ Lubuntu 22.04    / gcc-gfortran 11 (without fpm)
 
 ### Known issues
 
-Under Windows MSYS2 the `_WIN32` macro is not defined in gfortran (while it is in gcc). I don"t know how it is under environments others than MSYS2. The fix is to pass it explicitly: `fpm test --flag "-D_WIN32"`
+Under Windows MSYS2 the `_WIN32` macro is not defined in gfortran (while it is in gcc). I don't know how it is under environments others than MSYS2. The fix is to pass it explicitly: `fpm test --flag "-D_WIN32"`
 
 ## Limitations
 
