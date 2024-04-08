@@ -1,3 +1,7 @@
+   logical,     intent(in)   , optional :: writeback
+      !! if .true., the changes in memory in the copyonwrite mode are written back to the file
+
+   
    type(c_ptr) :: cptr
    !********************************************************************************************  
 
@@ -10,5 +14,4 @@
       rank(6) ; cptr = c_loc(p); p => null()
       rank(7) ; cptr = c_loc(p); p => null()
    end select
-
-   call fmmap_destroy_cptr(cptr)
+   call fmmap_destroy_cptr(cptr,writeback) ; 
