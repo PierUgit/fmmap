@@ -4,6 +4,17 @@ See also the [README](../README.md)
 
 ## Generalities
 
+About the types:
+- The  intrinsic types versions of the routines handle a selection of types:
+  - `real(real32)` (<-> default `real` on virtually all existing processors)
+  - `real(real64)` (<-> `double precision` on virtually all existing processors)
+  - `complex(real32)`
+  - `complex(real64)`
+  - `integer(int32)` (<-> default `integer` on virtually all existing processors)
+  - `integer(int64)`
+  - `character(kind=c_char)` (useful for byte-based addressing)
+
+
 About the Copy-on-Write feature:
 - The mapped file can still be bigger than the RAM+swap size, however the amount of writes is limited by the RAM+swap size (to overcome this, one can close the mapping with write-back and remap the file
 - Currently, write-back means the entire file is rewritten, whatever the amount of modifications. This can be inefficient. If the underlying filesystem natively supports copy-on-write, a better strategy consists in creating a copy of the file with a system call, and mapping the copy without Copy-on-Write.
