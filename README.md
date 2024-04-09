@@ -23,7 +23,7 @@ The approaches are complementary and both are available in the module.
 Example:
 ```fortran
 use iso_C_binding
-use ffmap_m
+use ffmap_m, fst => fmmap_size_t
 
 type sometype
    integer :: i
@@ -34,10 +34,10 @@ type(sometype), pointer :: pt(:)
 type(c_ptr) :: cptr 
 
 
-integer(fmmap_size_t) :: n, nbytes
+integer(fst) :: n, nbytes
 ...
 ...
-n = 10_fmmap_size_t ** 9   !! can be larger than RAM+swap space
+n = 10_fst ** 9   !! can be larger than RAM+swap space
 
 !> converts n elements to a number of bytes
 nbytes = fmmap_nbytes(n, storage_size(pt)) 
@@ -60,12 +60,13 @@ call fmmap_destroy(cptr)
 
 Example:
 ```fortran
-use ffmap_m   !! note that iso_c_binding is not needed
+! note that iso_c_binding is not needed
+use ffmap_m, fst => fmmap_size_t   
 
 integer, pointer :: pi(:)
-integer(fmmap_size_t) :: n
+integer(fst) :: n
 ...
-n = 10_fmmap_size_t ** 9   !! can be larger than RAM+swap space
+n = 10_fst ** 9   !! can be larger than RAM+swap space
 
 !> Mapping to a new named file; returns a 1D pointer of size n
 call fmmap_create(pi, [n], FMMAP_NEW, "./foo1.bin") 
@@ -80,16 +81,16 @@ call fmmap_destroy(pi)
 
 Other example:
 ```fortran
-use ffmap_m
+use ffmap_m, fst => fmmap_size_t 
 
 double precision, pointer :: pr(:,:,:)
-integer(fmmap_size_t) :: n, m
+integer(fst) :: n, m
 
 n = 1000; m = 100
 
 !> Mapping to an existing named file
 !> Returns a 3D pointer of size n*m*p, where p is determined by the file size
-call fmmap_create(pr, [n,m,-1_fmmap_size_t], FMMAP_OLD, "./foo2.bin") 
+call fmmap_create(pr, [n,m,-1_fst], FMMAP_OLD, "./foo2.bin") 
 
 !> work on pr(:) as if it was a classical array
 ! ...
@@ -102,12 +103,12 @@ call fmmap_destroy(pr)
 ### Copy-on-Write mapping
 
 ```fortran
-use ffmap_m
+use ffmap_m, fst => fmmap_size_t 
 
 integer, pointer :: pi(:)
-integer(fmmap_size_t) :: n
+integer(fst) :: n
 ...
-n = 10_fmmap_size_t ** 9
+n = 10_fst ** 9
 
 !> Mapping to a existing named file; returns a 1D pointer of size n
 call fmmap_create(pi, [n], FMMAP_OLD, "./foo1.bin", copyonwrite=.true.) 
