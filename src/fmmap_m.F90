@@ -6,9 +6,10 @@ use, intrinsic :: iso_fortran_env
 implicit none
 
    private
-   public :: fmmap_size_t, fmmap_t, fmmap_nbytes, fmmap_nelems
-   public :: fmmap_create, fmmap_destroy
+   public :: fmmap_size_t
    public :: FMMAP_SCRATCH, FMMAP_OLD, FMMAP_NEW
+   public :: fmmap_nbytes, fmmap_nelems
+   public :: fmmap_create, fmmap_destroy
 
    !> integer kind used for the sizes and and number of bytes or elements
    integer, parameter :: fmmap_size_t = c_long_long
@@ -127,20 +128,21 @@ contains
    !********************************************************************************************
    subroutine fmmap_create_cptr(cptr,nbytes,filemode,filename,copyonwrite)
    !********************************************************************************************
-   !! Opens a file and creates a "generic" mapping to a C pointer
-   !!
-   !! This routine is not thread safe !
+   !! Opens a file and creates a "generic" mapping to a C pointer.  
+   !! The whole file is mapped.  
+   !! A given file can be mapped only once at a time.  
+   !! This routine is not thread safe.
    !********************************************************************************************
    type(c_ptr),           intent(out)           :: cptr   
       !! C pointer to the mapped file
    integer(fmmap_size_t), intent(inout)         :: nbytes 
-      !! input requested size (for filemode 1 or 3), 
-      !! or output size of existing file (for filemode 2)
+      !! input requested size (FMMAP_SCRATCH or FMMAP_NEW), 
+      !! or output size of existing file (FMMAP_OLD)
    integer,               intent(in)            :: filemode 
-      !! FILE_SCRATCH, FILE_OLD, or FILE_NEW
+      !! FMMAP_SCRATCH, FMMAP_OLD, or FMMAP_NEW
    character(*),          intent(in),  optional :: filename 
-      !! FILE_OLD or FILE_new: required name of the file (with or without path)
-      !! FILE_SCRATCH: name of the path; not required;
+      !! FMMAP_OLD or FMMAP_new: required name of the file (with or without path)
+      !! FMMAP_SCRATCH: name of the path; not required;
       !! - if not present:
       !!   - POSIX: is "." (current directory) by default
       !!   - WIN32: the Windows temporary path is inquired     
@@ -200,9 +202,8 @@ contains
    !********************************************************************************************
    subroutine fmmap_destroy_cptr(cptr,writeback)
    !********************************************************************************************
-   !! Destroys a generic mapping and closes the file
-   !!
-   !! This routine is not thread safe !
+   !! Destroys a generic mapping and closes the file.  
+   !! This routine is not thread safe.
    !********************************************************************************************
    type(c_ptr), intent(inout)           :: cptr
       !! C pointer to the mapped file; is nullified on output
@@ -243,7 +244,9 @@ contains
    subroutine fmmap_create_rk1(p,shape,filemode,filename,lower,copyonwrite)
    !********************************************************************************************
    !! Opens a file and creates a mapping to a `real(real32)` pointer `p`  
-   !! This routine is not thread safe !
+   !! The whole file is mapped.  
+   !! A given file can be mapped only once at a time.  
+   !! This routine is not thread safe.
    !********************************************************************************************
    real(rk1), pointer :: p(..)   !! on output, `p` points to the mapped file
    real(rk1), pointer :: q(:)
@@ -257,7 +260,9 @@ contains
    subroutine fmmap_create_rk2(p,shape,filemode,filename,lower,copyonwrite)
    !********************************************************************************************
    !! Opens a file and creates a mapping to a `real(real64)` pointer `p`  
-   !! This routine is not thread safe !
+   !! The whole file is mapped.  
+   !! A given file can be mapped only once at a time.  
+   !! This routine is not thread safe.
    !********************************************************************************************
    real(rk2), pointer :: p(..)   !! on output, `p` points to the mapped file
    real(rk2), pointer :: q(:)
@@ -270,8 +275,10 @@ contains
    !********************************************************************************************
    subroutine fmmap_create_ck1(p,shape,filemode,filename,lower,copyonwrite)
    !********************************************************************************************
-   !! Opens a file and creates a mapping to a `complex(real32)` pointer `p`
-   !! This routine is not thread safe !
+   !! Opens a file and creates a mapping to a `complex(real32)` pointer `p`  
+   !! The whole file is mapped.  
+   !! A given file can be mapped only once at a time.  
+   !! This routine is not thread safe.
    !********************************************************************************************
    complex(rk1), pointer :: p(..)   !! on output, `p` points to the mapped file
    complex(rk1), pointer :: q(:)
@@ -284,8 +291,10 @@ contains
    !********************************************************************************************
    subroutine fmmap_create_ck2(p,shape,filemode,filename,lower,copyonwrite)
    !********************************************************************************************
-   !! Opens a file and creates a mapping to a `complex(real64)` pointer `p`
-   !! This routine is not thread safe !
+   !! Opens a file and creates a mapping to a `complex(real64)` pointer `p`  
+   !! The whole file is mapped.  
+   !! A given file can be mapped only once at a time.  
+   !! This routine is not thread safe.
    !********************************************************************************************
    complex(rk2), pointer :: p(..)   !! on output, `p` points to the mapped file
    complex(rk2), pointer :: q(:)
@@ -298,8 +307,10 @@ contains
    !********************************************************************************************
    subroutine fmmap_create_ik1(p,shape,filemode,filename,lower,copyonwrite)
    !********************************************************************************************
-   !! Opens a file and creates a mapping to an `integer(int32)` pointer `p`
-   !! This routine is not thread safe !
+   !! Opens a file and creates a mapping to an `integer(int32)` pointer `p`  
+   !! The whole file is mapped.  
+   !! A given file can be mapped only once at a time.  
+   !! This routine is not thread safe.
    !********************************************************************************************
    integer(ik1), pointer :: p(..)   !! on output, `p` points to the mapped file
    integer(ik1), pointer :: q(:)
@@ -312,8 +323,10 @@ contains
    !********************************************************************************************
    subroutine fmmap_create_ik2(p,shape,filemode,filename,lower,copyonwrite)
    !********************************************************************************************
-   !! Opens a file and creates a mapping to an `integer(int64)` pointer `p`
-   !! This routine is not thread safe !
+   !! Opens a file and creates a mapping to an `integer(int64)` pointer `p`  
+   !! The whole file is mapped.  
+   !! A given file can be mapped only once at a time.  
+   !! This routine is not thread safe.
    !********************************************************************************************
    integer(ik2), pointer :: p(..)   !! on output, `p` points to the mapped file
    integer(ik2), pointer :: q(:)
@@ -326,8 +339,10 @@ contains
    !********************************************************************************************
    subroutine fmmap_create_cchar(p,shape,filemode,filename,lower,copyonwrite)
    !********************************************************************************************
-   !! Opens a file and creates a mapping to a `character(kind=c_char)` pointer `p`
-   !! This routine is not thread safe !
+   !! Opens a file and creates a mapping to a `character(kind=c_char)` pointer `p`  
+   !! The whole file is mapped.  
+   !! A given file can be mapped only once at a time.  
+   !! This routine is not thread safe.
    !********************************************************************************************
    character(kind=c_char), pointer :: p(..)   !! on output, `p` points to the mapped file
    character(kind=c_char), pointer :: q(:)
@@ -340,9 +355,8 @@ contains
    !********************************************************************************************
    subroutine fmmap_destroy_rk1(p,writeback)
    !********************************************************************************************
-   !! Destroys a mapping to a `real(real32)` pointer and closes the file
-   !!
-   !! This routine is not thread safe !
+   !! Destroys a mapping to a `real(real32)` pointer and closes the file.  
+   !! This routine is not thread safe.
    !********************************************************************************************
    real(rk1), pointer :: p(..)   
       !! pointer to the mapped file; is nullified on output
@@ -355,9 +369,8 @@ contains
    !********************************************************************************************
    subroutine fmmap_destroy_rk2(p,writeback)
    !********************************************************************************************
-   !! Destroys a mapping to a `real(real64)` pointer and closes the file
-   !!
-   !! This routine is not thread safe !
+   !! Destroys a mapping to a `real(real64)` pointer and closes the file.  
+   !! This routine is not thread safe.
    !********************************************************************************************
    real(rk2), pointer :: p(..)
       !! pointer to the mapped file; is nullified on output
@@ -370,9 +383,8 @@ contains
    !********************************************************************************************
    subroutine fmmap_destroy_ck1(p,writeback)
    !********************************************************************************************
-   !! Destroys a mapping to a `complex(real32)` pointer and closes the file
-   !! 
-   !! This routine is not thread safe !
+   !! Destroys a mapping to a `complex(real32)` pointer and closes the file.  
+   !! This routine is not thread safe.
    !********************************************************************************************
    complex(rk1), pointer :: p(..)   
       !! pointer to the mapped file; is nullified on output
@@ -385,9 +397,8 @@ contains
    !********************************************************************************************
    subroutine fmmap_destroy_ck2(p,writeback)
    !********************************************************************************************
-   !! Destroys a mapping to a `complex(real64)` pointer and closes the file
-   !! (the file is unmapped and closed, and the pointer is nullified)
-   !! This routine is not thread safe !
+   !! Destroys a mapping to a `complex(real64)` pointer and closes the file.  
+   !! This routine is not thread safe.
    !********************************************************************************************
    complex(rk2), pointer :: p(..)    
       !! pointer to the mapped file; is nullified on output
@@ -400,9 +411,8 @@ contains
    !********************************************************************************************
    subroutine fmmap_destroy_ik1(p,writeback)
    !********************************************************************************************
-   !! Destroys a mapping to an `integer(int32)` pointer and closes the file
-   !! 
-   !! This routine is not thread safe !
+   !! Destroys a mapping to an `integer(int32)` pointer and closes the file.  
+   !! This routine is not thread safe.
    !********************************************************************************************
    integer(ik1), pointer :: p(..)   
       !! pointer to the mapped file; is nullified on output
@@ -415,9 +425,8 @@ contains
    !********************************************************************************************
    subroutine fmmap_destroy_ik2(p,writeback)
    !********************************************************************************************
-   !! Destroys a mapping to an `integer(int64)` pointer and closes the file  
-   !!  
-   !! This routine is not thread safe !
+   !! Destroys a mapping to an `integer(int64)` pointer and closes the file.  
+   !! This routine is not thread safe.
    !********************************************************************************************
    integer(ik2), pointer :: p(..)   
       !! pointer to the mapped file; is nullified on output
@@ -430,9 +439,8 @@ contains
    !********************************************************************************************
    subroutine fmmap_destroy_cchar(p,writeback)
    !********************************************************************************************
-   !! Destroys a mapping to a `character(kind=c_char)` pointer and closes the file  
-   !! 
-   !! This routine is not thread safe !
+   !! Destroys a mapping to a `character(kind=c_char)` pointer and closes the file.  
+   !! This routine is not thread safe.
    !********************************************************************************************
    character(kind=c_char), pointer :: p(..)   
       !! pointer to the mapped file; is nullified on output

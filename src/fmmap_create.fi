@@ -1,14 +1,14 @@
    integer(fmmap_size_t), intent(in)         :: shape(:) 
       !! shape of the pointer
       !! - `size(shape)` must be equal to the rank of `p`
-      !! - With `FMMAP_FILE_OLD` the last element of `shape` can be negative. In this case,
+      !! - With `FMMAP_OLD` the last element of `shape` can be negative. In this case,
       !!   the size of the last dimension of `p` is determined from the file size. This is
       !!   the recommended method.
    integer,             intent(in)           :: filemode 
-      !! FILE_SCRATCH, FILE_OLD, or FILE_NEW
+      !! FMMAP_SCRATCH, FMMAP_OLD, or FMMAP_NEW
    character(*),        intent(in), optional :: filename
-     !! FILE_OLD or FILE_new: required name of the file (with or without path)
-     !! FILE_SCRATCH: name of the path; not required;
+     !! FMMAP_OLD or FMMAP_new: required name of the file (with or without path)
+     !! FMMAP_SCRATCH: name of the path; not required;
      !! - if not present:
      !!   - POSIX: is "." (current directory) by default
      !!   - WIN32: the Windows temporary path is inquired     

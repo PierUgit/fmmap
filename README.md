@@ -1,14 +1,16 @@
-# fmmap 0.6.0 : memory mapped files in Fortran
+# fmmap 0.6.1 : memory mapped files in Fortran
+
+See also the ["detailed" documentation](doc/index.md)
 
 ## Introduction
 
 These routines provide *some* of the features of the posix or Windows memory mapped files under a simple and unique Fortran interface.
 
 2 main usages:
-- allocating arrays that are potentially bigger the RAM+swap size, and which are backed by a temporary file
-- opening existing files or creating new files, and mapping them to an array
+- allocating arrays that are potentially bigger than the RAM+swap size, and which are backed by a temporary file
+- opening existing files or creating new files (still potentially bigger than the RAM+swap size), and mapping them to an array
 
-Copy-on-Write mapping is possible, with optional write-back of the modifications to the file. Such mapping is useful when one doesn't want to modify the file on disk, or when one wants to work only in memory and decide when to update the file (or not).
+Copy-on-Write mapping is possible, with optional write-back of the modifications to the file. Such mapping can be useful when one doesn't want to modify the file on disk, or when one wants to work only in memory and decide when to update (or not) the file. 
 
 ## Usage
 
