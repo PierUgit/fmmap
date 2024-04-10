@@ -30,6 +30,7 @@ error codes:
 typedef struct {
     void*     ptr;
     long long n;
+    char*     filename;
     int       filemode;
 #ifdef _WIN32
     HANDLE    filedes;
@@ -56,6 +57,8 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
             strcpy(path,filename);
         }
 		GetTempFileNameA(path,"fmm",0u,tmpname);
+		x->filename = malloc(strlen(tmpname)+1);
+		strcpy( x->filename, tmpname );
  		x->filedes = fopen(tmpname,"wb+");                          
             if (x->filedes == NULL) return 1;
 		stat = _fseeki64(x->filedes, (__int64)(x->n-1), SEEK_SET);
@@ -74,6 +77,8 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
                                 , NULL );
 		if (x->filedes == INVALID_HANDLE_VALUE) return 5;
     } else {
+		x->filename = malloc(strlen(filename)+1);
+		strcpy( x->filename, filename );
 		x->filedes = CreateFileA( filename
                                 , GENERIC_READ | GENERIC_WRITE
                                 , FILE_SHARE_READ | FILE_SHARE_WRITE
@@ -99,6 +104,8 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
             strcat(tmpname,"/");
         }
         strcat(tmpname,"fmm.tmpXXXXXX");
+		x->filename = malloc(strlen(tmpname)+1);
+		strcpy( x->filename, tmpname );
         x->filedes = mkstemp(tmpname);
             if (x->filedes <= 0)  return 1;
         stat = unlink(tmpname);
@@ -106,6 +113,8 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
         stat = ftruncate(x->filedes, x->n);
             if (stat != 0) return 3;
     } else {
+		x->filename = malloc(strlen(filename)+1);
+		strcpy( x->filename, filename );
         x->filedes = open(filename,O_RDWR);
             if (x->filedes < 0) return 4;
     }
@@ -116,7 +125,7 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
                   , (x->cow ? MAP_PRIVATE : MAP_SHARED) | MAP_NORESERVE  
                   , x->filedes                         
                   , 0 );
-    if (x->ptr == MAP_FAILED) return 5;
+    if (x->ptr == MAP_FAILED) return 5;    
 #endif
 
     return 0;
@@ -165,6 +174,8 @@ int c_mmap_destroy( fmmap_t* x, const bool wb ) {
     stat = close(x->filedes);
         if (stat != 0) return 14;
 #endif
+
+    free( x->filename );
 
 	return 0;
 }

@@ -24,6 +24,7 @@ implicit none
       private
       type(c_ptr), public    :: cptr = c_null_ptr
       integer(fmmap_size_t)  :: cn
+      type(c_ptr)            :: cfilename
       integer(c_int)         :: cfilemode
 #ifdef _WIN32
       type(c_ptr)            :: cfiledes = c_null_ptr
@@ -221,12 +222,15 @@ contains
    
    call fmmap_table_pull( x, cptr )
    
-   wb = (x% cfilemode == FMMAP_NEW); if (present(writeback)) wb = writeback
+   wb = (x% cfilemode == FMMAP_NEW .and. x% ccow); if (present(writeback)) wb = writeback
+   if (wb .and. .not. x% ccow) then
+      error stop "*** fmmap_destroy_cptr: writeback must be .false. if Copy-on-Write is not used"
+   end if
    if (wb .and. x% cfilemode == FMMAP_SCRATCH) then
       error stop "*** fmmap_destroy_cptr: writeback must be .false. with FMMAP_SCRATCH"
    end if
-   if (.not.wb .and. x% cfilemode == FMMAP_NEW) then
-      error stop "*** fmmap_destroy_cptr: writeback must be .true. with FMMAP_NEW"
+   if (.not.wb .and. x% cfilemode == FMMAP_NEW .and. x% ccow) then
+      error stop "*** fmmap_destroy_cptr: writeback must be .true. with FMMAP_NEW and Copy-on-Write"
    end if
       
    stat = c_mmap_destroy( x, wb )

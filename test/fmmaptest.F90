@@ -29,6 +29,7 @@ filename = "./fun1.bin"
 pathname = "./"
 #endif
 
+print*
 print*, "Testing dp/rank1/FMMAP_SCRATCH:"
 
 call fmmap_create(pr,[n1],FMMAP_SCRATCH)
@@ -46,6 +47,7 @@ end if
 print*, "PASSED"
 
 
+print*
 print*, "Testing dp/rank1/FMMAP_SCRATCH large:"
 
 call fmmap_create(pr,[n3],FMMAP_SCRATCH)
@@ -59,6 +61,7 @@ call fmmap_destroy(pr)
 print*, "PASSED"
 
 
+print*
 print*, "Testing int/rank2/FMMAP_NEW"
 
 call fmmap_create(pi2,[n1,n1],FMMAP_NEW,filename)
@@ -73,6 +76,7 @@ end if
 print*, "PASSED"
 
 
+print*
 print*, "Testing int/rank3/FMMAP_OLD"
 
 call fmmap_create(pi3,[n1,n1/2,-1_fst],FMMAP_OLD,filename)
@@ -89,6 +93,7 @@ end if
 print*, "PASSED"
 
 
+print*
 print*, "Testing int/rank1/FMMAP_OLD/multiple_maps"
 
 call fmmap_create(pi1 ,[-1_fst],FMMAP_OLD,filename)
@@ -106,6 +111,7 @@ call fmmap_destroy(pi1b)
 print*, "PASSED"
 
 
+print*
 print*, "Testing cptr/rank1/FMMAP_SCRATCH"
 
 nbytes = fmmap_nbytes(n2,storage_size(pt))
@@ -129,6 +135,7 @@ end if
 print*, "PASSED"
 
 
+print*
 print*, "Testing cptr/rank1/FMMAP_OLD/copyonwrite/writeback"
 
 call fmmap_create(cptr,nbytes,FMMAP_OLD,filename,copyonwrite=.true.)
@@ -158,7 +165,7 @@ call fmmap_destroy(cptr)
 
 print*, "PASSED"
 
-
+print*
 open(newunit=lu, file=filename, status="OLD")
 close(lu,status="DELETE")
 
