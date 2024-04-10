@@ -1,13 +1,13 @@
 program fmmaptest
 use iso_c_binding
-use fmmap_m
+use fmmap_m, fst => fmmap_size_t
 implicit none
 
 type(c_ptr) :: cptr
 double precision, pointer :: pr(:)
-integer, pointer :: pi1(:), pi2(:,:), pi3(:,:,:)
+integer, pointer :: pi1(:), pi2(:,:), pi3(:,:,:), pi1b(:)
 integer :: i, stat, lu
-integer(fmmap_size_t) :: n, n1, n2, n3, nbytes
+integer(fst) :: n, n1, n2, n3, nbytes
 character(len=:), allocatable :: filename, pathname
 
 type sometype
@@ -17,9 +17,9 @@ type sometype
 end type
 type(sometype), pointer :: pt(:)
 
-n1 = 1000_fmmap_size_t
-n2 = 10_fmmap_size_t ** 7
-n3 = 2 * 10_fmmap_size_t ** 9
+n1 = 1000_fst
+n2 = 10_fst ** 7
+n3 = 2 * 10_fst ** 9
 
 #ifdef _WIN32
 filename = "C:\Temp\fun1.bin"
@@ -75,8 +75,8 @@ print*, "PASSED"
 
 print*, "Testing int/rank3/FMMAP_OLD"
 
-call fmmap_create(pi3,[n1,n1/2,-1_fmmap_size_t],FMMAP_OLD,filename)
-if (any(shape(pi3) /= [n1,n1/2,2_fmmap_size_t]) .or. pi3(1,1,1) /= 1 .or. pi3(n1,n1/2,2) /= -1) then
+call fmmap_create(pi3,[n1,n1/2,-1_fst],FMMAP_OLD,filename)
+if (any(shape(pi3) /= [n1,n1/2,2_fst]) .or. pi3(1,1,1) /= 1 .or. pi3(n1,n1/2,2) /= -1) then
    print*, "FAILED"
    error stop
 end if
@@ -85,6 +85,21 @@ if (associated(pi3)) then
    print*, "FAILED"
    error stop
 end if
+
+print*, "PASSED"
+
+
+print*, "Testing int/rank1/FMMAP_OLD/multiple_maps"
+
+call fmmap_create(pi1 ,[-1_fst],FMMAP_OLD,filename)
+call fmmap_create(pi1b,[-1_fst],FMMAP_OLD,filename)
+pi1(2) = -999
+if (pi1b(2) /= pi1(2)) then
+   print*, "FAILED"
+   error stop
+end if
+call fmmap_destroy(pi1)
+call fmmap_destroy(pi1b)
 
 print*, "PASSED"
 
