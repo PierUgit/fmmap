@@ -153,6 +153,5 @@ Under Windows MSYS2 the `_WIN32` macro is not defined in gfortran (while it is i
 ## Current limitations
 
 - The whole file is mapped, it's not possible to map only a portion of it
-- Only one mapping can be active at the same time on a given file
 - Mapping to an array of a derived type containing allocatable or pointer components is not allowed (well, it's technically possible, but the memory allocated by these components won't be part of the mapping).
 - The `ffmap_create()` and `ffmap_destroy()` routines are not thread-safe. 

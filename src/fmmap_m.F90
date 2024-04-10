@@ -130,7 +130,6 @@ contains
    !********************************************************************************************
    !! Opens a file and creates a "generic" mapping to a C pointer.  
    !! The whole file is mapped.  
-   !! A given file can be mapped only once at a time.  
    !! This routine is not thread safe.
    !********************************************************************************************
    type(c_ptr),           intent(out)           :: cptr   
@@ -245,7 +244,6 @@ contains
    !********************************************************************************************
    !! Opens a file and creates a mapping to a `real(real32)` pointer `p`  
    !! The whole file is mapped.  
-   !! A given file can be mapped only once at a time.  
    !! This routine is not thread safe.
    !********************************************************************************************
    real(rk1), pointer :: p(..)   !! on output, `p` points to the mapped file
@@ -261,7 +259,6 @@ contains
    !********************************************************************************************
    !! Opens a file and creates a mapping to a `real(real64)` pointer `p`  
    !! The whole file is mapped.  
-   !! A given file can be mapped only once at a time.  
    !! This routine is not thread safe.
    !********************************************************************************************
    real(rk2), pointer :: p(..)   !! on output, `p` points to the mapped file
@@ -277,7 +274,6 @@ contains
    !********************************************************************************************
    !! Opens a file and creates a mapping to a `complex(real32)` pointer `p`  
    !! The whole file is mapped.  
-   !! A given file can be mapped only once at a time.  
    !! This routine is not thread safe.
    !********************************************************************************************
    complex(rk1), pointer :: p(..)   !! on output, `p` points to the mapped file
@@ -293,7 +289,6 @@ contains
    !********************************************************************************************
    !! Opens a file and creates a mapping to a `complex(real64)` pointer `p`  
    !! The whole file is mapped.  
-   !! A given file can be mapped only once at a time.  
    !! This routine is not thread safe.
    !********************************************************************************************
    complex(rk2), pointer :: p(..)   !! on output, `p` points to the mapped file
@@ -309,7 +304,6 @@ contains
    !********************************************************************************************
    !! Opens a file and creates a mapping to an `integer(int32)` pointer `p`  
    !! The whole file is mapped.  
-   !! A given file can be mapped only once at a time.  
    !! This routine is not thread safe.
    !********************************************************************************************
    integer(ik1), pointer :: p(..)   !! on output, `p` points to the mapped file
@@ -325,7 +319,6 @@ contains
    !********************************************************************************************
    !! Opens a file and creates a mapping to an `integer(int64)` pointer `p`  
    !! The whole file is mapped.  
-   !! A given file can be mapped only once at a time.  
    !! This routine is not thread safe.
    !********************************************************************************************
    integer(ik2), pointer :: p(..)   !! on output, `p` points to the mapped file
@@ -341,7 +334,6 @@ contains
    !********************************************************************************************
    !! Opens a file and creates a mapping to a `character(kind=c_char)` pointer `p`  
    !! The whole file is mapped.  
-   !! A given file can be mapped only once at a time.  
    !! This routine is not thread safe.
    !********************************************************************************************
    character(kind=c_char), pointer :: p(..)   !! on output, `p` points to the mapped file

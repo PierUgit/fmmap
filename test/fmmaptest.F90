@@ -92,7 +92,9 @@ print*, "PASSED"
 print*, "Testing int/rank1/FMMAP_OLD/multiple_maps"
 
 call fmmap_create(pi1 ,[-1_fst],FMMAP_OLD,filename)
+   print*, "     1st mapping ok"
 call fmmap_create(pi1b,[-1_fst],FMMAP_OLD,filename)
+   print*, "     2nd mapping ok"
 pi1(2) = -999
 if (pi1b(2) /= pi1(2)) then
    print*, "FAILED"

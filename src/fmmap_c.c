@@ -65,12 +65,22 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
             if (statwrt != 1)   return 3;
 		stat = fclose(x->filedes);                               
             if (stat != 0)   return 4;
-  		x->filedes = CreateFileA(tmpname,GENERIC_READ | GENERIC_WRITE,0,NULL,OPEN_EXISTING
-                                ,FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE, NULL);
-		    if (x->filedes == INVALID_HANDLE_VALUE) return 5;
+  		x->filedes = CreateFileA( tmpname
+                                , GENERIC_READ | GENERIC_WRITE
+                                , 0
+                                , NULL
+                                , OPEN_EXISTING
+                                , FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE
+                                , NULL );
+		if (x->filedes == INVALID_HANDLE_VALUE) return 5;
     } else {
-		x->filedes = CreateFileA(filename,GENERIC_READ | GENERIC_WRITE,0,NULL,OPEN_EXISTING
-                                ,FILE_ATTRIBUTE_NORMAL, NULL);
+		x->filedes = CreateFileA( filename
+                                , GENERIC_READ | GENERIC_WRITE
+                                , FILE_SHARE_READ | FILE_SHARE_WRITE
+                                , NULL
+                                , OPEN_EXISTING
+                                , FILE_ATTRIBUTE_NORMAL
+                                , NULL );
 		if (x->filedes == INVALID_HANDLE_VALUE) return 7;
 	}
 	x->mapdes = CreateFileMappingA(x->filedes,NULL,PAGE_READWRITE,0,0,NULL); 

@@ -49,7 +49,6 @@ None
    !********************************************************************************************
    !! Opens a file and creates a "generic" mapping to a C pointer.  
    !! The whole file is mapped.  
-   !! A given file can be mapped only once at a time.  
    !! This routine is not thread safe.
    !********************************************************************************************
    type(c_ptr),           intent(out)           :: cptr   
@@ -87,7 +86,6 @@ None
    !********************************************************************************************
    !! Opens a file and creates a mapping to a <sometype> pointer `p`  
    !! The whole file is mapped.  
-   !! A given file can be mapped only once at a time.  
    !! This routine is not thread safe.
    !********************************************************************************************
    <sometype>, pointer :: p(..)   !! on output, `p` points to the mapped file
@@ -140,7 +138,8 @@ None
 - `integer(int64)`
 - `character(kind=c_char)`
 
-```   !********************************************************************************************
+```
+   !********************************************************************************************
    subroutine fmmap_destroy(p,writeback)
    !********************************************************************************************
    !! Destroys a mapping to a <sometype> pointer and closes the file.  
@@ -157,7 +156,7 @@ None
 ### `fmmap_nbytes`
 
 ```
-!********************************************************************************************
+   !********************************************************************************************
    function fmmap_nbytes(n,ss)
    !********************************************************************************************
    !! converts a number of elements to a number of bytes
