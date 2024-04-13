@@ -33,13 +33,12 @@ typedef struct {
     char*     filename;
     int       filemode;
 #ifdef _WIN32
-    HANDLE    filedes;
+    HANDLE    filedes; // not really needed in the structure actually
     HANDLE    mapdes;
 #else
     int       filedes;
 #endif
     bool      cow;
-    bool      used;
 } fmmap_t;
 
 
@@ -64,14 +63,14 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
 
         // create temp file
  	    x->filedes = fopen(tmpname,"wb+");                          
-            if (x->filedes == NULL) return 1;
+            if (x->filedes == NULL) return 101;
 	    stat = _fseeki64(x->filedes, (__int64)(x->n-1), SEEK_SET);
-            if (stat != 0)   return 2;
+            if (stat != 0)   return 101;
 	    char foo = 0; 
 	    size_t statwrt = fwrite(&foo,(size_t)1,(size_t)1,x->filedes);
-            if (statwrt != 1)   return 3;
+            if (statwrt != 1)   return 101;
 	    stat = fclose(x->filedes);                               
-            if (stat != 0)   return 4;
+            if (stat != 0)   return 101;
 
         // (re)open temp file with the Windows API
   	    x->filedes = CreateFileA( tmpname
@@ -81,7 +80,7 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
                                 , OPEN_EXISTING
                                 , FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE
                                 , NULL );
-	    if (x->filedes == INVALID_HANDLE_VALUE) return 5;
+	    if (x->filedes == INVALID_HANDLE_VALUE) return 111;
 	    
     } else {
 	    
@@ -96,17 +95,21 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
                                 , OPEN_EXISTING
                                 , FILE_ATTRIBUTE_NORMAL
                                 , NULL );
-	    if (x->filedes == INVALID_HANDLE_VALUE) return 7;
+	    if (x->filedes == INVALID_HANDLE_VALUE) return 111;
 	    
 	}
 
     // map file and define a view
     x->mapdes = CreateFileMappingA(x->filedes,NULL,PAGE_READWRITE,0,0,NULL); 
-        if (x->mapdes == NULL)   return 8;
+        if (x->mapdes == NULL)   return 121;
     x->ptr = MapViewOfFile( x->mapdes
                           , (x->cow ? FILE_MAP_COPY : FILE_MAP_ALL_ACCESS)
                           , 0, 0, 0);        
-    if (x->ptr == NULL) return 9;
+    if (x->ptr == NULL) return 122;
+    
+    // close the file
+    stat = (int)CloseHandle(x->filedes);
+        if (stat == 0) return 131;
 #else
     if (x->filemode == 1) {
 
@@ -124,11 +127,11 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
 
         // create temp file (and keep it open)
         x->filedes = mkstemp(tmpname);
-            if (x->filedes <= 0)  return 1;
-        stat = unlink(tmpname);
-            if (stat != 0) return 2;
+            if (x->filedes <= 0)  return 101;
+        stat = unlink(tmpname);   // without unlink, the file is not removed at the end on macOS (bug)
+            if (stat != 0) return 101;
         stat = ftruncate(x->filedes, x->n);
-            if (stat != 0) return 3;
+            if (stat != 0) return 101;
 	    
     } else {
 	    
@@ -137,7 +140,7 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
 
         // open file
         x->filedes = open(filename,O_RDWR);
-            if (x->filedes < 0) return 4;
+            if (x->filedes < 0) return 111;
 	    
     }
 	
@@ -148,7 +151,11 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
                   , (x->cow ? MAP_PRIVATE : MAP_SHARED) | MAP_NORESERVE  
                   , x->filedes                         
                   , 0 );
-    if (x->ptr == MAP_FAILED) return 5;    
+    if (x->ptr == MAP_FAILED) return 121;    
+    
+    // close the file
+    stat = close(x->filedes);
+        if (stat != 0) return 131;
 #endif
 
     return 0;
@@ -169,42 +176,43 @@ int c_mmap_destroy( fmmap_t* x, const bool wb ) {
         void* ptr2 = MapViewOfFile( x->mapdes
                                  , FILE_MAP_ALL_ACCESS
                                  , 0, 0, 0);
-        if (ptr2 == NULL) return 15;
+        if (ptr2 == NULL) return 201;
         memcpy(ptr2,x->ptr,(size_t)x->n);
         stat = (int)UnmapViewOfFile(ptr2);
-            if (stat == 0) return 16;
+            if (stat == 0) return 202;
 	    
     }
     if (x->filemode != 1) {
         // flushing, except for the SCRATCH case
         stat = (int)FlushViewOfFile(x->ptr,0);   // not sure it's needed
-            if (stat == 0) return 11;
+            if (stat == 0) return 211;
     }
-    // closing the view, the mapping, and the file
+    // closing the view and the mapping
     stat = (int)UnmapViewOfFile(x->ptr);
-        if (stat == 0) return 12;
+        if (stat == 0) return 222;
     stat = (int)CloseHandle(x->mapdes);
-        if (stat == 0) return 13;
-    stat = (int)CloseHandle(x->filedes);
-        if (stat == 0) return 14;
+        if (stat == 0) return 221;
 #else
     if (wb) {
-        // writeback case, classical write into the file
-        statwrt = write(x->filedes, x->ptr, (size_t)x->n);
-            if (statwrt != (size_t)x->n) return 15;
-        stat = fsync(x->filedes);   // not sure it's needed...
-            if (stat != 0) return 16; 
+        // writeback case, new mapping in shared mode
+        fmmap_t y;
+        y.n = x->n;
+        y.filemode = 2;
+        y.cow = false;
+        stat = c_mmap_create( &y, x->filename );
+            if (stat != 0) return 201;
+        memcpy(y.ptr,x->ptr,x->n); 
+        stat = c_mmap_destroy( &y, false );
+            if (stat != 0) return 202;
     }
     if (x->filemode != 1) {
         // flushing, except for the SCRATCH case
         stat = msync(x->ptr, (size_t)x->n, MS_SYNC);
-        if (stat != 0) return 11;
+        if (stat != 0) return 211;
     }
-    // unmapping and closing the file
+    // unmapping the file
     stat = munmap(x->ptr, (size_t)x->n);
-        if (stat != 0) return 12;
-    stat = close(x->filedes);
-        if (stat != 0) return 14;
+        if (stat != 0) return 221;
 #endif
 
     free( x->filename );
