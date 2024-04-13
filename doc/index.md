@@ -39,7 +39,7 @@ The files are opened with non-blocking read and write accesses, which means that
 ### `fmmap_create`
 
 ```    
-!********************************************************************************************
+   !********************************************************************************************
    subroutine fmmap_create(x,nbytes,filemode,filename,copyonwrite,stat)
    !********************************************************************************************
    !! Opens a file and creates a "generic" mapping to a C pointer.  
@@ -69,7 +69,7 @@ The files are opened with non-blocking read and write accesses, which means that
 ### `fmmap_destroy` (C pointer version)
 
 ```
-    !********************************************************************************************
+   !********************************************************************************************
    subroutine fmmap_destroy(x,writeback,stat)
    !********************************************************************************************
    !! Destroys a generic mapping
@@ -100,7 +100,7 @@ The files are opened with non-blocking read and write accesses, which means that
 ### `fmmap_nelems`
 
 ```
-!********************************************************************************************
+   !********************************************************************************************
    function fmmap_nelems(nbytes,ss)
    !********************************************************************************************
    !! converts a number of bytes into a number of elements
