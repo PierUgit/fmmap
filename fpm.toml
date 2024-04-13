@@ -1,5 +1,5 @@
 name = "fmmap"
-version = "0.6.3"
+version = "0.8.0"
 license = "GPL 3"
 author = "Pierre Hugonnet"
 maintainer = "Pierre Hugonnet"
