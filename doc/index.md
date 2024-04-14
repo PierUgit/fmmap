@@ -25,8 +25,7 @@ The files are opened with non-blocking read and write accesses, which means that
 
 ## public types
 
-`fmmap_t` : derived type holding the properties of the mapping. Public components:
-   - `% cptr` : the C pointer the memory area where the file is mapped
+`fmmap_t` : derived type holding the properties of the mapping, with no public component.
 
 ## public constants
 
