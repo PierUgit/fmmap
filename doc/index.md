@@ -65,9 +65,9 @@ The files are opened with non-blocking read and write accesses, which means that
       !! return status, is 0 if no error occurred
 ```
 
-### `fmmap_get_cptr
+### `fmmap_get_cptr`
 
-``
+```
    !********************************************************************************************
    function fmmap_get_cptr(x)
    !********************************************************************************************
@@ -77,7 +77,7 @@ The files are opened with non-blocking read and write accesses, which means that
       !! descriptor of the mapped file
    type(c_ptr)               :: fmmap_get_cptr
 
-``
+```
 
 ### `fmmap_destroy`
 
