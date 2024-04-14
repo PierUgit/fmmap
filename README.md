@@ -1,4 +1,4 @@
-# fmmap 0.8.0 : memory mapped files in Fortran
+# fmmap 0.9.0 : memory mapped files in Fortran
 
 See also the ["detailed" documentation](doc/index.md)
 
@@ -21,7 +21,7 @@ The interface manipulates bytes and returns a C pointer. The programmer has to m
 
 ```fortran
 use iso_C_binding
-use ffmap_m, fst => fmmap_size_t
+use ffmap_m, fst => fmmap_size_t, cptr => fmmap_get_cptr
 
 type sometype
    integer :: i
@@ -37,13 +37,13 @@ integer(fst) :: n, nbytes
 n = 10_fst ** 9   !! can be larger than RAM+swap space
 
 !> converts n elements to a number of bytes
-nbytes = fmmap_nbytes(n, storage_size(pt)) 
+nbytes = fmmap_elem2byte(n, storage_size(pt)) 
 
 !> creates a mapping to a temporary file and returns a C pointer
 call fmmap_create(x, nbytes, FMMAP_SCRATCH)
 
 !> conversion to a Fortran pointer
-call c_f_pointer(x%cptr, pt, [n])       
+call c_f_pointer(cptr(x), pt, [n])       
      
 !> work on pt(:) as if it was a classical array
 ! ...
@@ -57,7 +57,7 @@ call fmmap_destroy(x)
 
 ```fortran
 use iso_C_binding
-use ffmap_m, fst => fmmap_size_t   
+use ffmap_m, fst => fmmap_size_t, cptr => fmmap_get_cptr
 
 integer, pointer, contiguous :: pi(:,:), tmpi(:,:)
 type(fmmap_t) :: x
@@ -66,13 +66,13 @@ integer(fst) :: n
 n = 1000_fst   !! can be larger than RAM+swap space
 
 !> converts n*n elements to a number of bytes
-nbytes = fmmap_nbytes(n*n, storage_size(pi)) 
+nbytes = fmmap_elem2byte(n*n, storage_size(pi)) 
 
 !> Mapping to a new named file; returns a 1D pointer of size n
 call fmmap_create(x, bytes, FMMAP_NEW, "./foo1.bin") 
 
 !> conversion to a Fortran pointer, in 2 stages because we need a lower bound /= 1
-call c_f_pointer(x%cptr, tmpi, [n,n])      
+call c_f_pointer(cptr(x), tmpi, [n,n])      
 pi(0:n-1,1:n) => tmpi
                     
 !> work on pi(:,:) as if it was a classical array
@@ -87,7 +87,7 @@ call fmmap_destroy(x)
 
 ```fortran
 use iso_C_binding
-use ffmap_m, fst => fmmap_size_t 
+use ffmap_m, fst => fmmap_size_t, cptr => fmmap_get_cptr 
 
 integer, pointer :: pi(:)
 type(fmmap_t) :: x
@@ -96,8 +96,8 @@ integer(fst) :: n
 
 !> Mapping to a existing named file; get a 1D pointer of size n
 call fmmap_create(x, nbytes, FMMAP_OLD, "./foo1.bin", copyonwrite=.true.) 
-n = fmmap_nelems(nbytes, storage_size(pi))
-call c_f_pointer(x%cptr, pi, [n])      
+n = fmmap_byte2elem(nbytes, storage_size(pi))
+call c_f_pointer(cptr(x), pi, [n])      
                     
 !> work on pi(:) as if it was a classical array
 !> All the changes are resident only in memory, the file is unmodified 

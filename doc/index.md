@@ -46,7 +46,7 @@ The files are opened with non-blocking read and write accesses, which means that
    !! The whole file is mapped.  
    !********************************************************************************************
    type(fmmap_t),         intent(out)           :: x
-      !! C pointer to the mapped file
+      !! descriptor of the mapped file
    integer(fmmap_size_t), intent(inout)         :: nbytes 
       !! input requested size (FMMAP_SCRATCH or FMMAP_NEW), 
       !! or output size of existing file (FMMAP_OLD)
@@ -66,7 +66,21 @@ The files are opened with non-blocking read and write accesses, which means that
       !! return status, is 0 if no error occurred
 ```
 
-### `fmmap_destroy` (C pointer version)
+### `fmmap_get_cptr
+
+``
+   !********************************************************************************************
+   function fmmap_get_cptr(x)
+   !********************************************************************************************
+   !! Returns the C pointer of a mapped file  
+   !********************************************************************************************
+   type(fmmap_t), intent(in) :: x
+      !! descriptor of the mapped file
+   type(c_ptr)               :: fmmap_get_cptr
+
+``
+
+### `fmmap_destroy`
 
 ```
    !********************************************************************************************
@@ -75,7 +89,7 @@ The files are opened with non-blocking read and write accesses, which means that
    !! Destroys a generic mapping
    !********************************************************************************************
    type(fmmap_t), intent(inout)           :: x 
-      !! C pointer to the mapped file; is nullified on output
+      !! descriptor of the mapped file
    logical,     intent(in)   , optional :: writeback  
       !! if .true., the changes in memory in the copyonwrite mode are written back to the file
    integer,               intent(out),  optional :: stat
@@ -84,30 +98,34 @@ The files are opened with non-blocking read and write accesses, which means that
 
 ## Public utility procedures
 
-### `fmmap_nbytes`
+### `fmmap_elem2byte`
 
 ```
    !********************************************************************************************
-   function fmmap_nbytes(n,ss)
+   function fmmap_elem2byte(nelems,ss) result(nbytes)
    !********************************************************************************************
-   !! converts a number of elements to a number of bytes
+   !! converts a number of elements to a number of bytes  
+   !! `ss` is typically obtained with the intrinsic function `ss = storage_size(var)`,
+   !!  where `var` is any variable of the manipulated type+kind
    !********************************************************************************************
-   integer(fmmap_size_t), intent(in) :: n   !! number of elements
-   integer,               intent(in) :: ss  !! storage size (in bits) of 1 element
-   integer(fmmap_size_t) :: fmmap_nbytes    !! number of bytes
+   integer(fmmap_size_t), intent(in) :: nelems   !! number of elements
+   integer,               intent(in) :: ss       !! storage size (in bits) of 1 element
+   integer(fmmap_size_t)             :: nbytes   !! number of bytes
 ```
 
-### `fmmap_nelems`
+### `fmmap_byte2elem`
 
 ```
    !********************************************************************************************
-   function fmmap_nelems(nbytes,ss)
+   function fmmap_byte2elem(nbytes,ss) result(nelems)
    !********************************************************************************************
    !! converts a number of bytes into a number of elements
+   !! `ss` is typically obtained with the intrinsic function `ss = storage_size(var)`,
+   !!  where `var` is any variable of the manipulated type+kind
    !********************************************************************************************
-   integer(fmmap_size_t), intent(in) :: nbytes !! number of nbytes
-   integer,               intent(in) :: ss     !! storage size (in bits) of 1 element
-   integer(fmmap_size_t) :: fmmap_nelems   !! number of elements
+   integer(fmmap_size_t), intent(in) :: nbytes   !! number of nbytes
+   integer,               intent(in) :: ss       !! storage size (in bits) of 1 element
+   integer(fmmap_size_t)             :: nelems   !! number of elements
 ```
 
 ### `fmmap_errmsg`
