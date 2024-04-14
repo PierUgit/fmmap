@@ -39,7 +39,7 @@ n = 10_fst ** 9   !! can be larger than RAM+swap space
 !> converts n elements to a number of bytes
 nbytes = fmmap_elem2byte(n, storage_size(pt)) 
 
-!> creates a mapping to a temporary file and returns a C pointer
+!> creates a mapping to a temporary file
 call fmmap_create(x, nbytes, FMMAP_SCRATCH)
 
 !> conversion to a Fortran pointer
@@ -49,7 +49,7 @@ call c_f_pointer(cptr(x), pt, [n])
 ! ...
 ! ...
 
-!> closes the mapping and deletes the temporary file
+!> closes the mapping and delete the file
 call fmmap_destroy(x)                  
 ```
 
@@ -68,7 +68,7 @@ n = 1000_fst   !! can be larger than RAM+swap space
 !> converts n*n elements to a number of bytes
 nbytes = fmmap_elem2byte(n*n, storage_size(pi)) 
 
-!> Mapping to a new named file; returns a 1D pointer of size n
+!> Mapping to a new named file
 call fmmap_create(x, bytes, FMMAP_NEW, "./foo1.bin") 
 
 !> conversion to a Fortran pointer, in 2 stages because we need a lower bound /= 1
@@ -79,7 +79,7 @@ pi(0:n-1,1:n) => tmpi
 ! ...
 ! ...
 
-!> closes the mapping and the file (the file is NOT deleted)
+!> closes the mapping (the file is NOT deleted)
 call fmmap_destroy(x)
 ```
 
@@ -94,9 +94,10 @@ type(fmmap_t) :: x
 integer(fst) :: n
 ...
 
-!> Mapping to a existing named file; get a 1D pointer of size n
+!> Mapping to a existing named file
 call fmmap_create(x, nbytes, FMMAP_OLD, "./foo1.bin", copyonwrite=.true.) 
 n = fmmap_byte2elem(nbytes, storage_size(pi))
+!> Conversion to a Fortran pointer
 call c_f_pointer(cptr(x), pi, [n])      
                     
 !> work on pi(:) as if it was a classical array
@@ -105,12 +106,12 @@ call c_f_pointer(cptr(x), pi, [n])
 ! ...
 
 if (...) then
-    !> closes the mapping and the file. 
+    !> Closes the mapping 
     !> All the changes are lost and the original file is kept
     call fmmap_destroy(x)
 else
-    !> alternatively...
-    !> All the changes are written back to the file before unmapping and closing
+    !> Alternatively...
+    !> All the changes are written back to the file before unmapping
     call fmmap_destroy(x,writeback=.true.)
 end if
 ```
