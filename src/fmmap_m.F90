@@ -11,10 +11,10 @@ implicit none
    public :: FMMAP_SCRATCH, FMMAP_OLD, FMMAP_NEW
    public :: fmmap_byte2elem, fmmap_elem2byte
    public :: fmmap_create, fmmap_destroy
-   public :: fmmap_get_cptr, fmmap_errmsg
+   public :: fmmap_errmsg
 
    !> integer kind used for the sizes and and number of bytes or elements
-   integer, parameter :: fmmap_size_t = c_long_long
+   integer, parameter :: fmmap_size_t = c_size_t
          
    character(c_char) :: c
    integer, parameter :: bitsperbyte = storage_size(c)
@@ -22,6 +22,7 @@ implicit none
    type, bind(C) :: fmmap_s   ! structure for the C interface
       type(c_ptr)            :: ptr = c_null_ptr
       integer(fmmap_size_t)  :: n
+      integer(fmmap_size_t)  :: offset
       type(c_ptr)            :: filename
       integer(c_int)         :: filemode
 #ifdef _WIN32
@@ -36,9 +37,12 @@ implicit none
    
    type :: fmmap_t   ! public descriptor
       private
-      ! nested type, so that it will be possible to add type-bound procedures to fmmap_t
-      ! later on (which is not possible with bind(C) types)
-      type(fmmap_s) :: cx
+      ! nested type, so that type-bound procedures are possible
+      ! (which is not possible with bind(C) types)
+      type(fmmap_s), allocatable :: cx
+   contains
+      procedure, public :: cptr => fmmap_get_cptr
+      procedure, public :: nbytes => fmmap_get_nbytes
    end type
       
    !> predefined values for the `filemode` argument
@@ -117,64 +121,87 @@ contains
    
 
    !********************************************************************************************
-   subroutine fmmap_create_cptr(x,nbytes,filemode,filename,copyonwrite,stat)
+   subroutine fmmap_create_cptr(x,filemode,filename,nbytes,pos,copyonwrite,stat)
    !********************************************************************************************
    !! Opens a file and creates a "generic" mapping to a C pointer.  
    !! The whole file is mapped.  
    !********************************************************************************************
    type(fmmap_t),         intent(out)           :: x
       !! descriptor of the mapped file
-   integer(fmmap_size_t), intent(inout)         :: nbytes 
-      !! input requested size (FMMAP_SCRATCH or FMMAP_NEW), 
-      !! or output size of existing file (FMMAP_OLD)
    integer,               intent(in)            :: filemode 
       !! FMMAP_SCRATCH, FMMAP_OLD, or FMMAP_NEW
-   character(*),          intent(in),  optional :: filename 
-      !! FMMAP_OLD or FMMAP_new: required name of the file (with or without path)
-      !! FMMAP_SCRATCH: name of the path; not required;
-      !! - if not present:
-      !!   - POSIX: is "." (current directory) by default
+   character(*),          intent(in)            :: filename 
+      !! FMMAP_OLD or FMMAP_new: name of the file (with or without path)
+      !! FMMAP_SCRATCH: name of the path; can be empty (="")
+      !!   if empty:
+      !!   - POSIX: is set to "." (current directory)
       !!   - WIN32: the Windows temporary path is inquired     
-      !! - a processor dependent unique filename is be generated
+      !! - a processor dependent unique filename is generated and appended to the path
+   integer(fmmap_size_t), intent(in),  optional :: nbytes 
+      !! size of the mapping in number of bytes
+      !! required with FMMAP_SCRATCH or FMMAP_NEW
+      !! - the size of the file is then pos+nbytes  
+      !! optional with FMMAP_OLD
+      !! - if not present, the file is mapped from pos to the end of file
+   integer(fmmap_size_t), intent(in),  optional :: pos
+      !! Position in the file (in bytes) where the mapping starts
+      !! default = 1
+      !! Must be = 1 with FFMAP_SCRATCH and FMMAP_NEW
+      !! Follows the Fortran 1-based indexing (pos=1 is the first byte of the file)
    logical,               intent(in),  optional :: copyonwrite
       !! if .true., all the changes made to the mapped file stay only in memory
       !! and are not written back to the file.
-   integer,               intent(out),  optional :: stat
-      !! return status, is 0 if no error occurred
+      !! .false. by default
+   integer,               intent(out), optional :: stat
+      !! return status; is 0 if no error occurred
    
    integer :: i, lu, stat___
-   character(:), allocatable :: filename___
    character(kind=c_char,len=:), allocatable :: c_filename
-   character(128) :: msg
+   character(*), parameter :: msgpre = "*** fmmap_create_cptr: "
    !********************************************************************************************
    
+   if (file_storage_size /= bitsperbyte) then
+      error stop msgpre//"the file storage unit is not a byte"
+   end if
+   
+   if (present(nbytes)) then
+      if (nbytes <= 0) then
+         error stop msgpre//"nbytes must be >0"
+      end if
+   else
+      if (filemode /= FMMAP_OLD) then
+         error stop msgpre//"nbytes must be present with FMMAP_SCRATCH and FMMAP_NEW"
+      end if
+   end if
+   
+   if (present(pos)) then
+      if (filemode /= FMMAP_OLD .and. pos /= 1) then
+         error stop msgpre//"pos must be 1 with FMMAP_SCRATCH and FMMAP_NEW"
+      end if
+      if (pos <= 0) then
+         error stop msgpre//"pos must be >0"
+      end if      
+   end if
+   
+   if (filemode /= FMMAP_SCRATCH .and. trim(filename) == "") then
+      error stop msgpre//"filename must not be empty with FMMAP_NEW and FMMAP_OLD"
+   end if
+   
+   allocate( x% cx )
    stat___ = 0
    
    BODY: BLOCK
    ASSOCIATE( cx => x% cx )
    
-   if (file_storage_size /= bitsperbyte) then
-      error stop "*** fmmap_init: the file storage unit is not a byte"
-   end if
-
    cx%filemode = filemode
-   cx%cow      = .false. ; if (present(copyonwrite)) cx%cow = copyonwrite
+   cx%cow      = .false. ; if (present(copyonwrite)) cx%cow = copyonwrite  
+   cx% offset  = 0       ; if (present(pos)) cx%offset = pos - 1
    
    if (filemode == FMMAP_SCRATCH) then
       cx%n = nbytes
-      filename___ = "" ; if (present(filename)) filename___ = trim(filename)
-   else if (filemode == FMMAP_OLD) then
-      filename___ = filename
-      inquire(file=trim(filename___), size=cx%n)
-      if (cx%n < 0) then
-         stat___ = 2
-         exit BODY
-      end if
-      nbytes = cx%n
    else if (filemode == FMMAP_NEW) then
       cx%n = nbytes
-      filename___ = filename
-      open(newunit=lu,file=filename___,status='new' &
+      open(newunit=lu,file=trim(filename),status='new' &
           ,form='unformatted',access='stream',iostat=stat___)
       if (stat___ /= 0) then
          stat___ = 3
@@ -190,11 +217,21 @@ contains
          stat___ = 3
          exit BODY
       end if
+   else if (filemode == FMMAP_OLD) then
+      if (present(nbytes)) then
+         cx%n = nbytes
+      else
+         inquire(file=trim(filename), size=cx%n)
+         if (cx%n < 0) then
+            stat___ = 2
+            exit BODY
+         end if
+      end if
    else
-      error stop "*** fmmap_create_cptr: wrong filemode"
+      error stop msgpre//"wrong filemode"
    end if
    
-   c_filename = filename___ // c_null_char
+   c_filename = trim(filename) // c_null_char
    stat___ = c_mmap_create( cx, c_filename )
    if (stat___ /= 0) exit BODY
    
@@ -204,6 +241,7 @@ contains
    
    if (present(stat)) then
       stat = stat___
+      if (stat > 0) deallocate( x% cx )
    else
       if (stat___ > 0) error stop "*** fmmap_create_cptr: "//fmmap_errmsg(stat___)
    end if
@@ -216,12 +254,27 @@ contains
    !********************************************************************************************
    !! Returns the C pointer of a mapped file  
    !********************************************************************************************
-   type(fmmap_t), intent(in) :: x
+   class(fmmap_t), intent(in) :: x
       !! descriptor of the mapped file
-   type(c_ptr)               :: fmmap_get_cptr
+   type(c_ptr)                :: fmmap_get_cptr
    !********************************************************************************************
-   fmmap_get_cptr = x% cx % ptr
+   fmmap_get_cptr = c_null_ptr
+   if (allocated(x% cx)) fmmap_get_cptr = x% cx % ptr
    end function fmmap_get_cptr
+
+
+   !********************************************************************************************
+   function fmmap_get_nbytes(x)
+   !********************************************************************************************
+   !! Returns the number of bytes that are mapped  
+   !********************************************************************************************
+   class(fmmap_t), intent(in) :: x
+      !! descriptor of the mapped file
+   integer(fmmap_size_t)      :: fmmap_get_nbytes
+   !********************************************************************************************
+   fmmap_get_nbytes = -1
+   if (allocated(x% cx)) fmmap_get_nbytes = x% cx % n
+   end function fmmap_get_nbytes
 
 
    !********************************************************************************************
@@ -244,12 +297,12 @@ contains
    stat___ = 0
    
    BODY: BLOCK
-   ASSOCIATE( cx => x% cx )
-   
-   if (.not.c_associated(cx%ptr)) then
+   if (.not.allocated(x% cx)) then
       stat___ = 10
       exit BODY
    end if
+   ASSOCIATE( cx => x% cx )
+   
       
    wb = (cx% filemode == FMMAP_NEW .and. cx% cow); if (present(writeback)) wb = writeback
    if (wb .and. .not. cx% cow) then
@@ -272,6 +325,7 @@ contains
    
    if (present(stat)) then
       stat = stat___
+      if (stat > 0 .and. allocated(x% cx)) deallocate( x% cx )
    else
       if (stat___ > 0) error stop "*** fmmap_destroy_cptr: "//fmmap_errmsg(stat___)
    end if   
