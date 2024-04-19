@@ -42,7 +42,7 @@ implicit none
       type(fmmap_s), allocatable :: cx
    contains
       procedure, public :: cptr => fmmap_get_cptr
-      procedure, public :: nbytes => fmmap_get_nbytes
+      procedure, public :: length => fmmap_get_length
    end type
       
    !> predefined values for the `filemode` argument
@@ -121,7 +121,7 @@ contains
    
 
    !********************************************************************************************
-   subroutine fmmap_create_cptr(x,filemode,filename,nbytes,pos,copyonwrite,stat)
+   subroutine fmmap_create_cptr(x,filemode,filename,length,pos,copyonwrite,stat)
    !********************************************************************************************
    !! Opens a file and creates a "generic" mapping to a C pointer.  
    !! The whole file is mapped.  
@@ -137,10 +137,10 @@ contains
       !!   - POSIX: is set to "." (current directory)
       !!   - WIN32: the Windows temporary path is inquired     
       !! - a processor dependent unique filename is generated and appended to the path
-   integer(fmmap_size_t), intent(in),  optional :: nbytes 
+   integer(fmmap_size_t), intent(in),  optional :: length 
       !! size of the mapping in number of bytes
       !! required with FMMAP_SCRATCH or FMMAP_NEW
-      !! - the size of the file is then pos+nbytes  
+      !! - the size of the file is then pos+length-1  
       !! optional with FMMAP_OLD
       !! - if not present, the file is mapped from pos to the end of file
    integer(fmmap_size_t), intent(in),  optional :: pos
@@ -164,13 +164,13 @@ contains
       error stop msgpre//"the file storage unit is not a byte"
    end if
    
-   if (present(nbytes)) then
-      if (nbytes <= 0) then
-         error stop msgpre//"nbytes must be >0"
+   if (present(length)) then
+      if (length <= 0) then
+         error stop msgpre//"length must be >0"
       end if
    else
       if (filemode /= FMMAP_OLD) then
-         error stop msgpre//"nbytes must be present with FMMAP_SCRATCH and FMMAP_NEW"
+         error stop msgpre//"length must be present with FMMAP_SCRATCH and FMMAP_NEW"
       end if
    end if
    
@@ -198,9 +198,9 @@ contains
    cx% offset  = 0       ; if (present(pos)) cx%offset = pos - 1
    
    if (filemode == FMMAP_SCRATCH) then
-      cx%n = nbytes
+      cx%n = length
    else if (filemode == FMMAP_NEW) then
-      cx%n = nbytes
+      cx%n = length
       open(newunit=lu,file=trim(filename),status='new' &
           ,form='unformatted',access='stream',iostat=stat___)
       if (stat___ /= 0) then
@@ -218,8 +218,8 @@ contains
          exit BODY
       end if
    else if (filemode == FMMAP_OLD) then
-      if (present(nbytes)) then
-         cx%n = nbytes
+      if (present(length)) then
+         cx%n = length
       else
          inquire(file=trim(filename), size=cx%n)
          if (cx%n < 0) then
@@ -264,17 +264,17 @@ contains
 
 
    !********************************************************************************************
-   function fmmap_get_nbytes(x)
+   function fmmap_get_length(x)
    !********************************************************************************************
    !! Returns the number of bytes that are mapped  
    !********************************************************************************************
    class(fmmap_t), intent(in) :: x
       !! descriptor of the mapped file
-   integer(fmmap_size_t)      :: fmmap_get_nbytes
+   integer(fmmap_size_t)      :: fmmap_get_length
    !********************************************************************************************
-   fmmap_get_nbytes = -1
-   if (allocated(x% cx)) fmmap_get_nbytes = x% cx % n
-   end function fmmap_get_nbytes
+   fmmap_get_length = -1
+   if (allocated(x% cx)) fmmap_get_length = x% cx % n
+   end function fmmap_get_length
 
 
    !********************************************************************************************
@@ -291,28 +291,28 @@ contains
    
    integer :: i, stat___
    logical(c_bool) :: wb
-   character(128) :: msg
+   character(*), parameter :: msgpre = "*** fmmap_destroy_cptr: "
    !********************************************************************************************
    
    stat___ = 0
    
    BODY: BLOCK
+   ASSOCIATE( cx => x% cx )
+
    if (.not.allocated(x% cx)) then
       stat___ = 10
       exit BODY
    end if
-   ASSOCIATE( cx => x% cx )
-   
-      
+         
    wb = (cx% filemode == FMMAP_NEW .and. cx% cow); if (present(writeback)) wb = writeback
    if (wb .and. .not. cx% cow) then
-      error stop "*** fmmap_destroy_cptr: writeback must be .false. if Copy-on-Write is not used"
+      error stop msgpre//"writeback must be .false. if Copy-on-Write is not used"
    end if
    if (wb .and. cx% filemode == FMMAP_SCRATCH) then
-      error stop "*** fmmap_destroy_cptr: writeback must be .false. with FMMAP_SCRATCH"
+      error stop msgpre//"writeback must be .false. with FMMAP_SCRATCH"
    end if
    if (.not.wb .and. cx% filemode == FMMAP_NEW .and. cx% cow) then
-      error stop "*** fmmap_destroy_cptr: writeback must be .true. with FMMAP_NEW and Copy-on-Write"
+      error stop msgpre//"writeback must be .true. with FMMAP_NEW and Copy-on-Write"
    end if
       
    stat___ = c_mmap_destroy( cx, wb )
@@ -327,7 +327,7 @@ contains
       stat = stat___
       if (stat > 0 .and. allocated(x% cx)) deallocate( x% cx )
    else
-      if (stat___ > 0) error stop "*** fmmap_destroy_cptr: "//fmmap_errmsg(stat___)
+      if (stat___ > 0) error stop msgpre//fmmap_errmsg(stat___)
    end if   
    
    end subroutine fmmap_destroy_cptr

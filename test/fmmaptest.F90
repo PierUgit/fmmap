@@ -7,7 +7,7 @@ type(fmmap_t) :: x, y
 double precision, pointer :: pr(:)
 integer, pointer :: pi1(:), pi2(:,:), pi3(:,:,:), pi1b(:)
 integer :: i, stat, lu
-integer(fst) :: n, n1, n2, n3, nbytes
+integer(fst) :: n, n1, n2, n3, length
 character(len=:), allocatable :: filename, pathname
 
 type sometype
@@ -32,8 +32,8 @@ pathname = "./"
 print*
 print*, "Testing dp/rank1/FMMAP_SCRATCH:"
 
-nbytes = fmmap_elem2byte( n1, storage_size(pr) )
-call fmmap_create( x, FMMAP_SCRATCH, "", nbytes ) 
+length = fmmap_elem2byte( n1, storage_size(pr) )
+call fmmap_create( x, FMMAP_SCRATCH, "", length ) 
 call c_f_pointer( x%cptr(), pr, [n1] )
 pr = [(real(i), i=1,n1)]
 if (size(pr) /= n1 .or. pr(n1) /= n1) then
@@ -52,8 +52,8 @@ print*, "PASSED"
 print*
 print*, "Testing dp/rank1/FMMAP_SCRATCH large:"
 
-nbytes = fmmap_elem2byte( n3, storage_size(pr) )
-call fmmap_create( x, FMMAP_SCRATCH, "", nbytes ) 
+length = fmmap_elem2byte( n3, storage_size(pr) )
+call fmmap_create( x, FMMAP_SCRATCH, "", length ) 
 call c_f_pointer( x%cptr(), pr, [n3] )
 pr(n3) = 42d0
 if (pr(n3) /= 42d0) then
@@ -68,8 +68,8 @@ print*, "PASSED"
 print*
 print*, "Testing int/rank2/FMMAP_NEW"
 
-nbytes = fmmap_elem2byte( n1*n1, storage_size(pi2) )
-call fmmap_create( x, FMMAP_NEW, filename, nbytes )
+length = fmmap_elem2byte( n1*n1, storage_size(pi2) )
+call fmmap_create( x, FMMAP_NEW, filename, length )
 call c_f_pointer( x%cptr(), pi2, [n1,n1] )
 pi2(:,:) = 1
 pi2(n1,n1) = -1
@@ -115,9 +115,9 @@ print*, "PASSED"
 print*
 print*, "Testing cptr/rank1/FMMAP_SCRATCH"
 
-nbytes = fmmap_elem2byte( n2, storage_size(pt) )
-print*, "     "//"creating scratch mapping of", nbytes," bytes"
-call fmmap_create( x, FMMAP_SCRATCH, pathname, nbytes)
+length = fmmap_elem2byte( n2, storage_size(pt) )
+print*, "     "//"creating scratch mapping of", length," bytes"
+call fmmap_create( x, FMMAP_SCRATCH, pathname, length)
 call c_f_pointer( x%cptr(), pt, [n2] )
 print*, "     "//"filling the array"
 call random_number( pt(:)%a ); pt(n2)%a = 0.5
@@ -136,7 +136,7 @@ print*
 print*, "Testing cptr/rank1/FMMAP_OLD/copyonwrite/writeback"
 
 call fmmap_create( x, FMMAP_OLD, filename, copyonwrite=.true. )
-n = fmmap_byte2elem( x%nbytes(), storage_size(pi1))
+n = fmmap_byte2elem( x%length(), storage_size(pi1))
 call c_f_pointer( x%cptr(), pi1, [n] )
 if (pi1(n) /= -1) then
    print*, "FAILED 1"
