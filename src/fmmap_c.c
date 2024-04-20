@@ -18,7 +18,7 @@
 #endif
 
 /*
-filemode = 1: scratch file
+filestatus = 1: scratch file
            2: open an existing file
            3: create a new file
            
@@ -31,7 +31,7 @@ typedef struct {
     void*     ptr;
     size_t    n;
     char*     filename;
-    int       filemode;
+    int       filestatus;
 #ifdef _WIN32
     HANDLE    filedes; // not really needed in the structure actually
     HANDLE    mapdes;
@@ -48,7 +48,7 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
     int stat;
     
 #ifdef _WIN32
-    if (x->filemode == 1) {
+    if (x->filestatus == 1) {
 
         // build temp file name
         char path[MAX_PATH], tmpname[MAX_PATH];
@@ -111,7 +111,7 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
     stat = (int)CloseHandle(x->filedes);
         if (stat == 0) return 131;
 #else
-    if (x->filemode == 1) {
+    if (x->filestatus == 1) {
 
         // build temp file name
         char tmpname[1024];
@@ -182,7 +182,7 @@ int c_mmap_destroy( fmmap_t* x, const bool wb ) {
             if (stat == 0) return 202;
 	    
     }
-    if (x->filemode != 1) {
+    if (x->filestatus != 1) {
         // flushing, except for the SCRATCH case
         stat = (int)FlushViewOfFile(x->ptr,0);   // not sure it's needed
             if (stat == 0) return 211;
@@ -197,7 +197,7 @@ int c_mmap_destroy( fmmap_t* x, const bool wb ) {
         // writeback case, new mapping in shared mode
         fmmap_t y;
         y.n = x->n;
-        y.filemode = 2;
+        y.filestatus = 2;
         y.cow = false;
         stat = c_mmap_create( &y, x->filename );
             if (stat != 0) return 201;
@@ -205,7 +205,7 @@ int c_mmap_destroy( fmmap_t* x, const bool wb ) {
         stat = c_mmap_destroy( &y, false );
             if (stat != 0) return 202;
     }
-    if (x->filemode != 1) {
+    if (x->filestatus != 1) {
         // flushing, except for the SCRATCH case
         stat = msync(x->ptr, (size_t)x->n, MS_SYNC);
         if (stat != 0) return 211;

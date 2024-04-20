@@ -23,7 +23,7 @@ implicit none
       type(c_ptr)            :: ptr = c_null_ptr
       integer(fmmap_size_t)  :: n
       type(c_ptr)            :: filename
-      integer(c_int)         :: filemode
+      integer(c_int)         :: filestatus
 #ifdef _WIN32
       type(c_ptr)            :: filedes = c_null_ptr
       type(c_ptr)            :: mapdes  = c_null_ptr
@@ -44,7 +44,7 @@ implicit none
       procedure, public :: length => fmmap_get_length
    end type
       
-   !> predefined values for the `filemode` argument
+   !> predefined values for the `filestatus` argument
    integer, parameter :: FMMAP_SCRATCH = 1
    integer, parameter :: FMMAP_OLD     = 2
    integer, parameter :: FMMAP_NEW     = 3
@@ -120,14 +120,14 @@ contains
    
 
    !********************************************************************************************
-   subroutine fmmap_create_cptr(x,filemode,filename,length,copyonwrite,stat)
+   subroutine fmmap_create_cptr(x,filestatus,filename,length,copyonwrite,stat)
    !********************************************************************************************
    !! Opens a file and creates a "generic" mapping to a C pointer.  
    !! The whole file is mapped.  
    !********************************************************************************************
    type(fmmap_t),         intent(out)           :: x
       !! descriptor of the mapped file
-   integer,               intent(in)            :: filemode 
+   integer,               intent(in)            :: filestatus 
       !! FMMAP_SCRATCH, FMMAP_OLD, or FMMAP_NEW
    character(*),          intent(in)            :: filename 
       !! FMMAP_OLD or FMMAP_new: name of the file (with or without path)
@@ -137,11 +137,11 @@ contains
       !!   - WIN32: the Windows temporary path is inquired     
       !! - a processor dependent unique filename is generated and appended to the path
    integer(fmmap_size_t), intent(in),  optional :: length 
-      !! length of the mapping in number of bytes
-      !! FMMAP_SCRATCH or FMMAP_NEW
+      !! Length of the mapping in number of bytes
+      !! Required with FMMAP_SCRATCH or FMMAP_NEW
       !! - the size of the file is then length bytes
-      !! FMMAP_OLD
-      !! - ignored; the length can be later inquired with x%lenght()
+      !! Must not be present with FMMAP_OLD
+      !! - the length can be later inquired with x%lenght()
    logical,               intent(in),  optional :: copyonwrite
       !! if .true., all the changes made to the mapped file stay only in memory
       !! and are not written back to the file.
@@ -159,19 +159,19 @@ contains
    end if
    
    if (present(length)) then
-      if (filemode == FMMAP_OLD) then
+      if (filestatus == FMMAP_OLD) then
          error stop msgpre//"length must not be present with FMMAP_OLD"
       end if
       if (length < 0) then
          error stop msgpre//"length must be >=0"
       end if
    else
-      if (filemode /= FMMAP_OLD) then
+      if (filestatus /= FMMAP_OLD) then
          error stop msgpre//"length must not be present with FMMAP_NEW or FMMAP_OLD"
       end if
    end if
    
-   if (filemode /= FMMAP_SCRATCH .and. trim(filename) == "") then
+   if (filestatus /= FMMAP_SCRATCH .and. trim(filename) == "") then
       error stop msgpre//"filename must not be empty with FMMAP_NEW or FMMAP_OLD"
    end if
    
@@ -181,12 +181,12 @@ contains
    BODY: BLOCK
    ASSOCIATE( cx => x% cx )
    
-   cx%filemode = filemode
+   cx%filestatus = filestatus
    cx%cow      = .false. ; if (present(copyonwrite)) cx%cow = copyonwrite  
    
-   if (filemode == FMMAP_SCRATCH) then
+   if (filestatus == FMMAP_SCRATCH) then
       cx%n = length
-   else if (filemode == FMMAP_NEW) then
+   else if (filestatus == FMMAP_NEW) then
       cx%n = length
       open(newunit=lu,file=trim(filename),status='new' &
           ,form='unformatted',access='stream',iostat=stat___)
@@ -204,7 +204,7 @@ contains
          stat___ = 3
          exit BODY
       end if
-   else if (filemode == FMMAP_OLD) then
+   else if (filestatus == FMMAP_OLD) then
       inquire(file=trim(filename), size=cx%n)
       if (cx%n < 0) then
          stat___ = 2
@@ -212,7 +212,7 @@ contains
       end if
       cx%n = cx%n
    else
-      error stop msgpre//"wrong filemode"
+      error stop msgpre//"wrong filestatus"
    end if
    
    c_filename = trim(filename) // c_null_char
@@ -288,14 +288,14 @@ contains
       exit BODY
    end if
          
-   wb = (cx% filemode == FMMAP_NEW .and. cx% cow); if (present(writeback)) wb = writeback
+   wb = (cx% filestatus == FMMAP_NEW .and. cx% cow); if (present(writeback)) wb = writeback
    if (wb .and. .not. cx% cow) then
       error stop msgpre//"writeback must be .false. if Copy-on-Write is not used"
    end if
-   if (wb .and. cx% filemode == FMMAP_SCRATCH) then
+   if (wb .and. cx% filestatus == FMMAP_SCRATCH) then
       error stop msgpre//"writeback must be .false. with FMMAP_SCRATCH"
    end if
-   if (.not.wb .and. cx% filemode == FMMAP_NEW .and. cx% cow) then
+   if (.not.wb .and. cx% filestatus == FMMAP_NEW .and. cx% cow) then
       error stop msgpre//"writeback must be .true. with FMMAP_NEW and Copy-on-Write"
    end if
       
@@ -315,5 +315,22 @@ contains
    end if   
    
    end subroutine fmmap_destroy_cptr
-
+   
+   
+   !********************************************************************************************
+   function upcase(str)
+   !********************************************************************************************
+   character(*), intent(in) :: str
+   character(len(str)) :: upcase
+   
+   character(*), parameter :: LC = "abcdefghijklmnopqrstuvwxz"
+   character(*), parameter :: UC = "ABCDEFGHIJKLMNOPQRSTUVWXZ"
+   integer :: i, j
+   !********************************************************************************************
+   do i = 1, len(str)
+      j = index( LC, str(i:i) )
+      upcase(i:i) = merge( UC(j:j), str(i:i), j > 0)
+   end do
+   end function upcase
+   
 end module fmmap_m
