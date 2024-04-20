@@ -3,12 +3,12 @@ module fmmap_m
 !***********************************************************************************************
 use, intrinsic :: iso_c_binding
 use, intrinsic :: iso_fortran_env
-use fmmap_errors_m
 implicit none
 
    private
    public :: fmmap_size_t, fmmap_t
-   public :: FMMAP_SCRATCH, FMMAP_OLD, FMMAP_NEW
+   public :: FMMAP_SCRATCH, FMMAP_OLD, FMMAP_NEW, FMMAP_NOFILE
+   public :: FMMAP_TMPDIR
    public :: fmmap_byte2elem, fmmap_elem2byte
    public :: fmmap_create, fmmap_destroy
    public :: fmmap_errmsg
@@ -31,7 +31,8 @@ implicit none
 ! posix assumed
       integer(c_int)         :: filedes
 #endif
-      logical(c_bool)        :: cow
+      logical(c_bool)        :: private = .false.
+      logical(c_bool)        :: anon = .false.
    end type
    
    type :: fmmap_t   ! public descriptor
@@ -48,6 +49,10 @@ implicit none
    integer, parameter :: FMMAP_SCRATCH = 1
    integer, parameter :: FMMAP_OLD     = 2
    integer, parameter :: FMMAP_NEW     = 3
+   integer, parameter :: FMMAP_NOFILE  = 4
+
+   !> predefined values for the `filename` argument
+   character(*), parameter :: FMMAP_TMPDIR = " "
    
    interface
    
@@ -73,6 +78,10 @@ implicit none
    !> Generic routine name that destroys an existing mapping
    interface fmmap_destroy
       module procedure fmmap_destroy_cptr
+   end interface
+   
+   interface operator(.streq.)
+      module procedure strcomp
    end interface
    
 contains
@@ -120,7 +129,7 @@ contains
    
 
    !********************************************************************************************
-   subroutine fmmap_create_cptr(x,filestatus,filename,length,copyonwrite,stat)
+   subroutine fmmap_create_cptr(x,filestatus,filename,length,private,stat)
    !********************************************************************************************
    !! Opens a file and creates a "generic" mapping to a C pointer.  
    !! The whole file is mapped.  
@@ -142,7 +151,7 @@ contains
       !! - the size of the file is then length bytes
       !! Must not be present with FMMAP_OLD
       !! - the length can be later inquired with x%lenght()
-   logical,               intent(in),  optional :: copyonwrite
+   logical,               intent(in),  optional :: private
       !! if .true., all the changes made to the mapped file stay only in memory
       !! and are not written back to the file.
       !! .false. by default
@@ -152,29 +161,13 @@ contains
    integer :: i, lu, stat___
    character(kind=c_char,len=:), allocatable :: c_filename
    character(*), parameter :: msgpre = "*** fmmap_create_cptr: "
+   character(:), allocatable :: msg
    !********************************************************************************************
    
    if (file_storage_size /= bitsperbyte) then
       error stop msgpre//"the file storage unit is not a byte"
    end if
-   
-   if (present(length)) then
-      if (filestatus == FMMAP_OLD) then
-         error stop msgpre//"length must not be present with FMMAP_OLD"
-      end if
-      if (length < 0) then
-         error stop msgpre//"length must be >=0"
-      end if
-   else
-      if (filestatus /= FMMAP_OLD) then
-         error stop msgpre//"length must not be present with FMMAP_NEW or FMMAP_OLD"
-      end if
-   end if
-   
-   if (filestatus /= FMMAP_SCRATCH .and. trim(filename) == "") then
-      error stop msgpre//"filename must not be empty with FMMAP_NEW or FMMAP_OLD"
-   end if
-   
+            
    allocate( x% cx )
    stat___ = 0
    
@@ -182,12 +175,38 @@ contains
    ASSOCIATE( cx => x% cx )
    
    cx%filestatus = filestatus
-   cx%cow      = .false. ; if (present(copyonwrite)) cx%cow = copyonwrite  
+   cx% private = (filestatus == FMMAP_NOFILE)
+   if (present(private)) cx%private = private  
    
    if (filestatus == FMMAP_SCRATCH) then
+      if (.not.(filename.streq.FMMAP_TMPDIR) .and. len_trim(filename) == 0) then
+         error stop msgpre//"filename must not be empty with FMMAP_SCRATCH"
+      end if
+      if (.not.present(length)) then
+         error stop msgpre//"length must be present with FMMAP_SCRATCH"
+      end if
       cx%n = length
+   else if (filestatus == FMMAP_NOFILE) then
+      if (.not.(filename.streq."")) then
+         error stop msgpre//"filename must be empty with FMMAP_NOFILE"
+      end if
+      if (.not.present(length)) then
+         error stop msgpre//"length must be present with FMMAP_NOFILE"
+      end if
+      if (.not.cx%private) then
+         error stop msgpre//"private must be .true. with FMMAP_NOFILE"
+      end if
+      cx%n = length
+      cx%anon = .true.
    else if (filestatus == FMMAP_NEW) then
+      if (len_trim(filename) == 0) then
+         error stop msgpre//"filename must not be empty with FMMAP_NEW"
+      end if
+      if (.not.present(length)) then
+         error stop msgpre//"length must be present with FMMAP_NEW"
+      end if
       cx%n = length
+      cx%anon = .false.
       open(newunit=lu,file=trim(filename),status='new' &
           ,form='unformatted',access='stream',iostat=stat___)
       if (stat___ /= 0) then
@@ -205,6 +224,12 @@ contains
          exit BODY
       end if
    else if (filestatus == FMMAP_OLD) then
+      if (len_trim(filename) == 0) then
+         error stop msgpre//"filename must not be empty with FMMAP_OLD"
+      end if
+      if (present(length)) then
+         error stop msgpre//"length must not be present with FMMAP_OLD"
+      end if
       inquire(file=trim(filename), size=cx%n)
       if (cx%n < 0) then
          stat___ = 2
@@ -227,7 +252,8 @@ contains
       stat = stat___
       if (stat > 0) deallocate( x% cx )
    else
-      if (stat___ > 0) error stop "*** fmmap_create_cptr: "//fmmap_errmsg(stat___)
+      msg = msgpre//fmmap_errmsg(stat___)
+      if (stat___ > 0) error stop msg
    end if
                   
    end subroutine fmmap_create_cptr
@@ -276,6 +302,7 @@ contains
    integer :: i, stat___
    logical(c_bool) :: wb
    character(*), parameter :: msgpre = "*** fmmap_destroy_cptr: "
+   character(:), allocatable :: msg
    !********************************************************************************************
    
    stat___ = 0
@@ -288,15 +315,18 @@ contains
       exit BODY
    end if
          
-   wb = (cx% filestatus == FMMAP_NEW .and. cx% cow); if (present(writeback)) wb = writeback
-   if (wb .and. .not. cx% cow) then
-      error stop msgpre//"writeback must be .false. if Copy-on-Write is not used"
-   end if
-   if (wb .and. cx% filestatus == FMMAP_SCRATCH) then
-      error stop msgpre//"writeback must be .false. with FMMAP_SCRATCH"
-   end if
-   if (.not.wb .and. cx% filestatus == FMMAP_NEW .and. cx% cow) then
-      error stop msgpre//"writeback must be .true. with FMMAP_NEW and Copy-on-Write"
+   wb = (cx% filestatus == FMMAP_NEW .and. cx% private); if (present(writeback)) wb = writeback
+   if (wb) then
+      if (.not. cx% private) then
+         error stop msgpre//"writeback must be .false. if private was .false."
+      end if
+      if (cx% filestatus == FMMAP_SCRATCH .or. cx% filestatus == FMMAP_NOFILE) then
+         error stop msgpre//"writeback must be .false. with FMMAP_SCRATCH or FMMAP_NOFILE"
+      end if
+   else
+      if (cx% filestatus == FMMAP_NEW .and. cx% private) then
+         error stop msgpre//"writeback must be .true. with FMMAP_NEW if private was true"
+      end if
    end if
       
    stat___ = c_mmap_destroy( cx, wb )
@@ -309,9 +339,10 @@ contains
    
    if (present(stat)) then
       stat = stat___
-      if (stat > 0 .and. allocated(x% cx)) deallocate( x% cx )
+      if (allocated(x% cx)) deallocate( x% cx )
    else
-      if (stat___ > 0) error stop msgpre//fmmap_errmsg(stat___)
+      msg = msgpre//fmmap_errmsg(stat___)
+      if (stat___ > 0) error stop msg
    end if   
    
    end subroutine fmmap_destroy_cptr
@@ -333,4 +364,47 @@ contains
    end do
    end function upcase
    
+   
+   !********************************************************************************************
+   logical pure function strcomp(s,t)
+   !********************************************************************************************
+   character(*), intent(in) :: s, t
+   !********************************************************************************************
+   strcomp = (s == t) .and. (len(s) == len(t))
+   end function strcomp
+   
+
+   !********************************************************************************************
+   function fmmap_errmsg(stat) result(msg)
+   !********************************************************************************************
+   !! Returns the error messages corresponding to an error code
+   !********************************************************************************************
+   integer, intent(in) :: stat
+   character(len=:), allocatable :: msg
+   !********************************************************************************************
+
+   select case (stat)
+   case (  0); msg = "No error!!!"
+   case (  1); msg = "The Fortran file storage unit is not a byte; fmmap module not usable"
+   case (  2); msg = "Unable to inquire the file size (F)"
+   case (  3); msg = "Unable to create the NEW file (F)"
+   case ( 10); msg = "Attempt to free a non associated C pointer (F)"
+   case (101); msg = "Unable to create the SCRATCH file (C)"
+   case (105); msg = "Unable to reopen the SCRATCH file (C)"
+   case (111); msg = "Unable to open the file (C)"
+   case (121); msg = "Unable to map the file (C)"
+   case (122); msg = "Unable to mapview the file (C)"
+   case (131); msg = "Unable to close the file (C)"
+   case (201); msg = "Unable to create a new mapping for writeback (C)"
+   case (202); msg = "Unable to destroy the new mapping for writeback (C)"
+   case (211); msg = "Unable to flush/sync the mapping (C)"
+   case (221); msg = "Unable to unmap (C)"
+   case (222); msg = "Unable to unmapview (C)"
+   
+   case default; msg = "Invalid error code!!!"
+   end select
+   
+   end function fmmap_errmsg
+    
+
 end module fmmap_m

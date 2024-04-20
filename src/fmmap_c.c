@@ -19,8 +19,8 @@
 
 /*
 filestatus = 1: scratch file
-           2: open an existing file
-           3: create a new file
+             2: open an existing file
+             3: create a new file
            
 error codes:
     (later)
@@ -33,12 +33,13 @@ typedef struct {
     char*     filename;
     int       filestatus;
 #ifdef _WIN32
-    HANDLE    filedes; // not really needed in the structure actually
+    HANDLE    filedes;
     HANDLE    mapdes;
 #else
     int       filedes;
 #endif
-    bool      cow;
+    bool      private;
+    bool      anon;
 } fmmap_t;
 
 
@@ -46,42 +47,48 @@ typedef struct {
 int c_mmap_create( fmmap_t* x, const char* filename) {
 	
     int stat;
-    
+
+//----------------------------------------------------
 #ifdef _WIN32
+//---------------------WIN32--------------------------
     if (x->filestatus == 1) {
 
         // build temp file name
         char path[MAX_PATH], tmpname[MAX_PATH];
-	    if (strlen(filename) == 0) {
+        if (strlen(filename) == 0) {
             GetTempPathA(MAX_PATH,path);
         } else {
             strcpy(path,filename);
         }   
-	    GetTempFileNameA(path,"fmm",0u,tmpname);
-	    x->filename = malloc(strlen(tmpname)+1);
-	    strcpy( x->filename, tmpname );
+        GetTempFileNameA(path,"fmm",0u,tmpname);
+        x->filename = malloc(strlen(tmpname)+1);
+        strcpy( x->filename, tmpname );
 
         // create temp file
- 	    x->filedes = fopen(tmpname,"wb+");                          
+        x->filedes = fopen(tmpname,"wb+");                          
             if (x->filedes == NULL) return 101;
-	    stat = _fseeki64(x->filedes, (__int64)(x->n-1), SEEK_SET);
+        stat = _fseeki64(x->filedes, (__int64)(x->n-1), SEEK_SET);
             if (stat != 0)   return 101;
-	    char foo = 0; 
-	    size_t statwrt = fwrite(&foo,(size_t)1,(size_t)1,x->filedes);
+        char foo = 0; 
+        size_t statwrt = fwrite(&foo,(size_t)1,(size_t)1,x->filedes);
             if (statwrt != 1)   return 101;
-	    stat = fclose(x->filedes);                               
+        stat = fclose(x->filedes);                               
             if (stat != 0)   return 101;
 
         // (re)open temp file with the Windows API
-  	    x->filedes = CreateFileA( tmpname
+        x->filedes = CreateFileA( tmpname
                                 , GENERIC_READ | GENERIC_WRITE
                                 , 0
                                 , NULL
                                 , OPEN_EXISTING
                                 , FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE
                                 , NULL );
-	    if (x->filedes == INVALID_HANDLE_VALUE) return 111;
+        if (x->filedes == INVALID_HANDLE_VALUE) return 111;
 	    
+    } else if (x->filestatus == 4) {
+    
+        x->filedes = INVALID_HANDLE_VALUE;
+        
     } else {
 	    
 	    x->filename = malloc(strlen(filename)+1);
@@ -100,30 +107,36 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
 	}
 
     // map file and define a view
-    x->mapdes = CreateFileMappingA(x->filedes,NULL,PAGE_READWRITE,0,0,NULL); 
+    DWORD nhi = (n >> 32);
+    DWORD nlo = n - (nhi << 32)
+    x->mapdes = CreateFileMappingA(x->filedes,NULL,PAGE_READWRITE,nhi,nlo,NULL); 
         if (x->mapdes == NULL)   return 121;
     x->ptr = MapViewOfFile( x->mapdes
-                          , (x->cow ? FILE_MAP_COPY : FILE_MAP_ALL_ACCESS)
+                          , (x->private ? FILE_MAP_COPY : FILE_MAP_ALL_ACCESS)
                           , 0, 0, x->n );        
     if (x->ptr == NULL) return 122;
     
     // close the file
-    stat = (int)CloseHandle(x->filedes);
-        if (stat == 0) return 131;
+    if (! x->anon) {
+        stat = (int)CloseHandle(x->filedes);
+            if (stat == 0) return 131;
+    }
+//----------------------------------------------------
 #else
+//---------------------POSIX--------------------------
     if (x->filestatus == 1) {
 
         // build temp file name
         char tmpname[1024];
-    	if (strlen(filename) == 0) {
+        if (strlen(filename) == 0) {
             strcpy(tmpname,"./");
         } else {
             strcpy(tmpname,filename);
             strcat(tmpname,"/");
         }
         strcat(tmpname,"fmm.tmpXXXXXX");
-    	x->filename = malloc(strlen(tmpname)+1);
-    	strcpy( x->filename, tmpname );
+        x->filename = malloc(strlen(tmpname)+1);
+        strcpy( x->filename, tmpname );
 
         // create temp file (and keep it open)
         x->filedes = mkstemp(tmpname);
@@ -132,7 +145,11 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
             if (stat != 0) return 101;
         stat = ftruncate(x->filedes, x->n);
             if (stat != 0) return 101;
-	    
+	
+	} else if (x->filestatus == 4) {
+	
+	    x->filedes = -1;
+    
     } else {
 	    
         x->filename = malloc(strlen(filename)+1);
@@ -148,15 +165,21 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
     x->ptr = mmap ( NULL                        
                   , (size_t)x->n                  
                   , PROT_READ | PROT_WRITE      
-                  , (x->cow ? MAP_PRIVATE : MAP_SHARED) | MAP_NORESERVE  
+                  ,   (x->private ? MAP_PRIVATE : MAP_SHARED) 
+                    | (x->anon ? MAP_ANONYMOUS : 0) 
+                    | MAP_NORESERVE  
                   , x->filedes                         
                   , 0 );
-    if (x->ptr == MAP_FAILED) return 121;    
+    if (x->ptr == MAP_FAILED) return 121;     printf("%d\n",x->ptr);
     
     // close the file
-    stat = close(x->filedes);
-        if (stat != 0) return 131;
+    if (! x->anon) {
+        stat = close(x->filedes);
+            if (stat != 0) return 131;
+    } 
+//----------------------------------------------------
 #endif
+//----------------------------------------------------
 
     return 0;
 }
@@ -168,7 +191,9 @@ int c_mmap_destroy( fmmap_t* x, const bool wb ) {
     int stat;
     size_t statwrt;
     
+//----------------------------------------------------
 #ifdef _WIN32
+//---------------------WIN32--------------------------
     if (wb) {
 
     // writeback case, create another view on the same mapping
@@ -192,13 +217,15 @@ int c_mmap_destroy( fmmap_t* x, const bool wb ) {
         if (stat == 0) return 222;
     stat = (int)CloseHandle(x->mapdes);
         if (stat == 0) return 221;
+//----------------------------------------------------
 #else
+//---------------------POSIX--------------------------
     if (wb) {
         // writeback case, new mapping in shared mode
         fmmap_t y;
         y.n = x->n;
         y.filestatus = 2;
-        y.cow = false;
+        y.private = false;
         stat = c_mmap_create( &y, x->filename );
             if (stat != 0) return 201;
         memcpy(y.ptr,x->ptr,x->n); 
@@ -211,9 +238,12 @@ int c_mmap_destroy( fmmap_t* x, const bool wb ) {
         if (stat != 0) return 211;
     }
     // unmapping the file
+         printf("%d\n",x->ptr);
     stat = munmap(x->ptr, (size_t)x->n);
         if (stat != 0) return 221;
+//----------------------------------------------------
 #endif
+//----------------------------------------------------
 
     free( x->filename );
 
