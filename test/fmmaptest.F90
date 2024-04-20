@@ -95,14 +95,15 @@ print*, "PASSED"
 print*
 print*, "Testing int/rank1/FMMAP_OLD/multiple_maps"
 
-call fmmap_create( x, FMMAP_OLD, filename)
-call c_f_pointer( x%cptr(), pi1, [n1*n1] )
+call fmmap_create( x, FMMAP_OLD, filename )
+n = fmmap_byte2elem( x%length(), storage_size(pi1b) )
+call c_f_pointer( x%cptr(), pi1, [n] )
    print*, "     1st mapping ok"
-call fmmap_create( y, FMMAP_OLD, filename)
-call c_f_pointer( y%cptr(), pi1b, [n1*n1] )
+call fmmap_create( y, FMMAP_OLD, filename )
+call c_f_pointer( y%cptr(), pi1b, [n] )
    print*, "     2nd mapping ok"
-pi1(2) = -999
-if (pi1b(2) /= pi1(2)) then
+pi1(10) = -999
+if (pi1b(10) /= pi1(10)) then
    print*, "FAILED"
    error stop
 end if

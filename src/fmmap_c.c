@@ -30,7 +30,6 @@ error codes:
 typedef struct {
     void*     ptr;
     size_t    n;
-    size_t    offset;
     char*     filename;
     int       filemode;
 #ifdef _WIN32
@@ -103,11 +102,9 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
     // map file and define a view
     x->mapdes = CreateFileMappingA(x->filedes,NULL,PAGE_READWRITE,0,0,NULL); 
         if (x->mapdes == NULL)   return 121;
-    DWORD offhi = x->offset >> 32;
-    DWORD offlo = x->offset - (offhi << 32);
     x->ptr = MapViewOfFile( x->mapdes
                           , (x->cow ? FILE_MAP_COPY : FILE_MAP_ALL_ACCESS)
-                          , offhi, offlo, x->n );        
+                          , 0, 0, x->n );        
     if (x->ptr == NULL) return 122;
     
     // close the file
@@ -153,7 +150,7 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
                   , PROT_READ | PROT_WRITE      
                   , (x->cow ? MAP_PRIVATE : MAP_SHARED) | MAP_NORESERVE  
                   , x->filedes                         
-                  , x->offset );
+                  , 0 );
     if (x->ptr == MAP_FAILED) return 121;    
     
     // close the file
@@ -176,11 +173,9 @@ int c_mmap_destroy( fmmap_t* x, const bool wb ) {
 
     // writeback case, create another view on the same mapping
     // and copy one view to the other
-        DWORD offhi = x->offset >> 32;
-        DWORD offlo = x->offset - (offhi << 32);
         void* ptr2 = MapViewOfFile( x->mapdes
                                  , FILE_MAP_ALL_ACCESS
-                                 , offhi, offlo, x->n);
+                                 , 0, 0, x->n);
         if (ptr2 == NULL) return 201;
         memcpy(ptr2,x->ptr,(size_t)x->n);
         stat = (int)UnmapViewOfFile(ptr2);
@@ -202,7 +197,6 @@ int c_mmap_destroy( fmmap_t* x, const bool wb ) {
         // writeback case, new mapping in shared mode
         fmmap_t y;
         y.n = x->n;
-        y.offset = x->offset;
         y.filemode = 2;
         y.cow = false;
         stat = c_mmap_create( &y, x->filename );

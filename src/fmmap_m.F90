@@ -22,7 +22,6 @@ implicit none
    type, bind(C) :: fmmap_s   ! structure for the C interface
       type(c_ptr)            :: ptr = c_null_ptr
       integer(fmmap_size_t)  :: n
-      integer(fmmap_size_t)  :: offset
       type(c_ptr)            :: filename
       integer(c_int)         :: filemode
 #ifdef _WIN32
@@ -121,7 +120,7 @@ contains
    
 
    !********************************************************************************************
-   subroutine fmmap_create_cptr(x,filemode,filename,length,pos,copyonwrite,stat)
+   subroutine fmmap_create_cptr(x,filemode,filename,length,copyonwrite,stat)
    !********************************************************************************************
    !! Opens a file and creates a "generic" mapping to a C pointer.  
    !! The whole file is mapped.  
@@ -138,16 +137,11 @@ contains
       !!   - WIN32: the Windows temporary path is inquired     
       !! - a processor dependent unique filename is generated and appended to the path
    integer(fmmap_size_t), intent(in),  optional :: length 
-      !! size of the mapping in number of bytes
-      !! required with FMMAP_SCRATCH or FMMAP_NEW
-      !! - the size of the file is then pos+length-1  
-      !! optional with FMMAP_OLD
-      !! - if not present, the file is mapped from pos to the end of file
-   integer(fmmap_size_t), intent(in),  optional :: pos
-      !! Position in the file (in bytes) where the mapping starts
-      !! default = 1
-      !! Must be = 1 with FFMAP_SCRATCH and FMMAP_NEW
-      !! Follows the Fortran 1-based indexing (pos=1 is the first byte of the file)
+      !! length of the mapping in number of bytes
+      !! FMMAP_SCRATCH or FMMAP_NEW
+      !! - the size of the file is then length bytes
+      !! FMMAP_OLD
+      !! - ignored; the length can be later inquired with x%lenght()
    logical,               intent(in),  optional :: copyonwrite
       !! if .true., all the changes made to the mapped file stay only in memory
       !! and are not written back to the file.
@@ -165,26 +159,20 @@ contains
    end if
    
    if (present(length)) then
-      if (length <= 0) then
-         error stop msgpre//"length must be >0"
+      if (filemode == FMMAP_OLD) then
+         error stop msgpre//"length must not be present with FMMAP_OLD"
+      end if
+      if (length < 0) then
+         error stop msgpre//"length must be >=0"
       end if
    else
       if (filemode /= FMMAP_OLD) then
-         error stop msgpre//"length must be present with FMMAP_SCRATCH and FMMAP_NEW"
+         error stop msgpre//"length must not be present with FMMAP_NEW or FMMAP_OLD"
       end if
-   end if
-   
-   if (present(pos)) then
-      if (filemode /= FMMAP_OLD .and. pos /= 1) then
-         error stop msgpre//"pos must be 1 with FMMAP_SCRATCH and FMMAP_NEW"
-      end if
-      if (pos <= 0) then
-         error stop msgpre//"pos must be >0"
-      end if      
    end if
    
    if (filemode /= FMMAP_SCRATCH .and. trim(filename) == "") then
-      error stop msgpre//"filename must not be empty with FMMAP_NEW and FMMAP_OLD"
+      error stop msgpre//"filename must not be empty with FMMAP_NEW or FMMAP_OLD"
    end if
    
    allocate( x% cx )
@@ -195,7 +183,6 @@ contains
    
    cx%filemode = filemode
    cx%cow      = .false. ; if (present(copyonwrite)) cx%cow = copyonwrite  
-   cx% offset  = 0       ; if (present(pos)) cx%offset = pos - 1
    
    if (filemode == FMMAP_SCRATCH) then
       cx%n = length
@@ -218,15 +205,12 @@ contains
          exit BODY
       end if
    else if (filemode == FMMAP_OLD) then
-      if (present(length)) then
-         cx%n = length
-      else
-         inquire(file=trim(filename), size=cx%n)
-         if (cx%n < 0) then
-            stat___ = 2
-            exit BODY
-         end if
+      inquire(file=trim(filename), size=cx%n)
+      if (cx%n < 0) then
+         stat___ = 2
+         exit BODY
       end if
+      cx%n = cx%n
    else
       error stop msgpre//"wrong filemode"
    end if
