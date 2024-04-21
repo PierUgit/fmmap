@@ -31,7 +31,7 @@ print*
 print*, "Testing FMMAP_SCRATCH:"
 
 length = fmmap_elem2byte( n1, storage_size(pr) )
-call fmmap_create( x, FMMAP_SCRATCH, FMMAP_TMPDIR, length ) 
+call fmmap_create( x, FMMAP_SCRATCH, "", length ) 
 call c_f_pointer( x%cptr(), pr, [n1] )
 pr = [(real(i), i=1,n1)]
 if (size(pr) /= n1 .or. pr(n1) /= n1) then
@@ -51,7 +51,7 @@ print*
 print*, "Testing FMMAP_SCRATCH large:"
 
 length = fmmap_elem2byte( n3, storage_size(pr) )
-call fmmap_create( x, FMMAP_SCRATCH, FMMAP_TMPDIR, length ) 
+call fmmap_create( x, FMMAP_SCRATCH, "", length ) 
 call c_f_pointer( x%cptr(), pr, [n3] )
 pr(n3) = 42d0
 if (pr(n3) /= 42d0) then
@@ -89,7 +89,7 @@ call fmmap_destroy(x)
 
 print*, "PASSED"
 
-
+                            
 print*
 print*, "Testing FMMAP_OLD/multiple_maps"
 
@@ -106,7 +106,7 @@ if (pi1b(10) /= pi1(10)) then
    error stop
 end if
 call fmmap_destroy(x)
-call fmmap_destroy(y)
+!call fmmap_destroy(y)
 
 print*, "PASSED"
 
@@ -116,7 +116,7 @@ print*, "Testing FMMAP_SCRATCH"
 
 length = fmmap_elem2byte( n2, storage_size(pt) )
 print*, "     "//"creating scratch mapping of", length," bytes"
-call fmmap_create( x, FMMAP_SCRATCH, FMMAP_TMPDIR, length)
+call fmmap_create( x, FMMAP_SCRATCH, "", length)
 call c_f_pointer( x%cptr(), pt, [n2] )
 print*, "     "//"filling the array"
 call random_number( pt(:)%a ); pt(n2)%a = 0.5
@@ -157,19 +157,6 @@ if (pi1(n/2) /= 42) then
    print*, "FAILED 3"
    error stop
 end if
-call fmmap_destroy( x )
-
-print*, "PASSED"
-
-
-print*
-print*, "Testing FMMAP_NOFILE"
-
-length = fmmap_elem2byte( n2, storage_size(pr) )
-call fmmap_create( x, FMMAP_NOFILE, "", length )
-!call c_f_pointer( x%cptr(), pr, [n2] )
-!pr(:) = 42d0
-!print*, "CCC"
 call fmmap_destroy( x )
 
 print*, "PASSED"

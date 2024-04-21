@@ -170,7 +170,7 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
                     | MAP_NORESERVE  
                   , x->filedes                         
                   , 0 );
-    if (x->ptr == MAP_FAILED) return 121;     printf("%d\n",x->ptr);
+    if (x->ptr == MAP_FAILED) return 121;
     
     // close the file
     if (! x->anon) {
@@ -207,8 +207,8 @@ int c_mmap_destroy( fmmap_t* x, const bool wb ) {
             if (stat == 0) return 202;
 	    
     }
-    if (x->filestatus != 1) {
-        // flushing, except for the SCRATCH case
+    if (x->filestatus == 2 || x->filestatus == 3) {
+        // flushing for the NEW and OLD cases
         stat = (int)FlushViewOfFile(x->ptr,0);   // not sure it's needed
             if (stat == 0) return 211;
     }
@@ -232,13 +232,12 @@ int c_mmap_destroy( fmmap_t* x, const bool wb ) {
         stat = c_mmap_destroy( &y, false );
             if (stat != 0) return 202;
     }
-    if (x->filestatus != 1) {
-        // flushing, except for the SCRATCH case
+    if (x->filestatus == 2 || x->filestatus == 3) {
+        // flushing for the NEW and OLD cases
         stat = msync(x->ptr, (size_t)x->n, MS_SYNC);
         if (stat != 0) return 211;
     }
     // unmapping the file
-         printf("%d\n",x->ptr);
     stat = munmap(x->ptr, (size_t)x->n);
         if (stat != 0) return 221;
 //----------------------------------------------------

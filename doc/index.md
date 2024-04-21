@@ -4,7 +4,7 @@ See also the [README](../README.md)
 
 ## Generalities
 
-### Copy-on-Write feature:
+### Private feature:
 
 - The mapped file can still be bigger than the RAM+swap size, however the amount of writes is limited by the RAM+swap size (to overcome this, one can close the mapping with write-back and remap the file
 - Currently, write-back means the entire file is rewritten, whatever the amount of modifications. This can be inefficient. If the underlying filesystem natively supports copy-on-write, a better strategy consists in creating a copy of the file with a system call, and mapping the copy without Copy-on-Write.
@@ -15,7 +15,7 @@ The files are opened with non-blocking read and write accesses, which means that
 
 ## Module
 
-`use fmmap`
+`use fmmap_m`
 
 ## public kinds
 
@@ -27,11 +27,18 @@ The files are opened with non-blocking read and write accesses, which means that
 
 `fmmap_t` : derived type holding the properties of the mapping, with no public component.
 
+public type bound procedures, `type(fmmap_t) :: x`
+
+`type(c_ptr) x%cptr()` : returns the C pointer of the mapping
+
+`integer(fmmap_size_t) x%length()` : returns the length of the mapping, in bytes
+
 ## public constants
 
 `FMMAP_SCRATCH` : mapping of a temporary file which is deleted once the mapping is closed  
 `FMMAP_NEW`     : mapping of newly created file  
 `FMMAP_OLD`     : mapping of an existing file
+`FMMAP_NOFILE`  : mapping without a backing file (anonymous mapping)
 
 ## public procedures 
 
@@ -39,58 +46,61 @@ The files are opened with non-blocking read and write accesses, which means that
 
 ```    
    !********************************************************************************************
-   subroutine fmmap_create(x,nbytes,filemode,filename,copyonwrite,stat)
+   subroutine fmmap_create(x,filestatus,filename,length,private,stat)
    !********************************************************************************************
    !! Opens a file and creates a "generic" mapping to a C pointer.  
    !! The whole file is mapped.  
    !********************************************************************************************
    type(fmmap_t),         intent(out)           :: x
       !! descriptor of the mapped file
-   integer(fmmap_size_t), intent(inout)         :: nbytes 
-      !! input requested size (FMMAP_SCRATCH or FMMAP_NEW), 
-      !! or output size of existing file (FMMAP_OLD)
-   integer,               intent(in)            :: filemode 
-      !! FMMAP_SCRATCH, FMMAP_OLD, or FMMAP_NEW
-   character(*),          intent(in),  optional :: filename 
-      !! FMMAP_OLD or FMMAP_new: required name of the file (with or without path)
-      !! FMMAP_SCRATCH: name of the path; not required;
-      !! - if not present:
-      !!   - POSIX: is "." (current directory) by default
-      !!   - WIN32: the Windows temporary path is inquired     
-      !! - a processor dependent unique filename is be generated
-   logical,               intent(in),  optional :: copyonwrite
-      !! if .true., all the changes made to the mapped file stay only in memory
-      !! and are not written back to the file.
-   integer,               intent(out),  optional :: stat
-      !! return status, is 0 if no error occurred
+   integer,               intent(in)            :: filestatus 
+      !! FMMAP_SCRATCH: mapping a temporary file
+      !! FMMAP_OLD    : mapping an already existing file
+      !! FMMAP_NEW    : mapping a newly created created file
+      !! FMMAP_NOFILE : no physical file
+   character(*),          intent(in)            :: filename 
+      !! FMMAP_OLD or FMMAP_NEW: 
+      !! - name of the file (with or without path)
+      !! FMMAP_SCRATCH: 
+      !! - name of the path where the temporary file is created; if blank:
+      !!   - POSIX: the current directory ("./") is used
+      !!   - WIN32: the Windows temporary path is inquired and used 
+      !! - a processor dependent unique filename is then generated and appended to the path
+      !! FMMAP_NOFILE:
+      !! - must be empty ("")
+   integer(fmmap_size_t), intent(in),  optional :: length 
+      !! Length of the mapping in number of bytes
+      !! Required with FMMAP_SCRATCH, FMMAP_NEW, and FMMAP_NOFILE
+      !! - the size of the file (or virtual file) is then length bytes
+      !! Must not be present with FMMAP_OLD
+      !! - the length can be later inquired with x%lenght()
+   logical,               intent(in),  optional :: private
+      !! if .true., all the changes made to the mapped file are visible only by the current
+      !  mapping. All concurrent accesses to the file see the original data and not the 
+      !! changes. Technically the changes are permanently cached in memory pages dedicated
+      !! to current mapping.
+      !! - .false. by default with FMMAP_NEW, FMMAP_OLD, and FMMAP_SCRATCH
+      !! - .true. by default with FMMAP_NOFILE 
+   integer,               intent(out), optional :: stat
+      !! return status; is 0 if no error occurred
 ```
 
-### `fmmap_get_cptr`
-
-```
-   !********************************************************************************************
-   function fmmap_get_cptr(x)
-   !********************************************************************************************
-   !! Returns the C pointer of a mapped file  
-   !********************************************************************************************
-   type(fmmap_t), intent(in) :: x
-      !! descriptor of the mapped file
-   type(c_ptr)               :: fmmap_get_cptr
-
-```
 
 ### `fmmap_destroy`
 
 ```
    !********************************************************************************************
-   subroutine fmmap_destroy(x,writeback,stat)
+   subroutine fmmap_destroy_cptr(x,writeback,stat)
    !********************************************************************************************
    !! Destroys a generic mapping
    !********************************************************************************************
    type(fmmap_t), intent(inout)           :: x 
       !! descriptor of the mapped file
    logical,     intent(in)   , optional :: writeback  
-      !! if .true., the changes in memory in the copyonwrite mode are written back to the file
+      !! If .true., the changes in memory in the private mode are written back to the file 
+      !! before unmapping.
+      !! .false. by default with FFMAP_SCRATCH, FMMAP_OLD, and FFMAP_NOFILE
+      !! .true. by default with FMMAP_NEW 
    integer,               intent(out),  optional :: stat
       !! return status, is 0 if no error occurred
 ```

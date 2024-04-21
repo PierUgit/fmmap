@@ -8,7 +8,6 @@ implicit none
    private
    public :: fmmap_size_t, fmmap_t
    public :: FMMAP_SCRATCH, FMMAP_OLD, FMMAP_NEW, FMMAP_NOFILE
-   public :: FMMAP_TMPDIR
    public :: fmmap_byte2elem, fmmap_elem2byte
    public :: fmmap_create, fmmap_destroy
    public :: fmmap_errmsg
@@ -51,8 +50,6 @@ implicit none
    integer, parameter :: FMMAP_NEW     = 3
    integer, parameter :: FMMAP_NOFILE  = 4
 
-   !> predefined values for the `filename` argument
-   character(*), parameter :: FMMAP_TMPDIR = " "
    
    interface
    
@@ -137,24 +134,33 @@ contains
    type(fmmap_t),         intent(out)           :: x
       !! descriptor of the mapped file
    integer,               intent(in)            :: filestatus 
-      !! FMMAP_SCRATCH, FMMAP_OLD, or FMMAP_NEW
+      !! FMMAP_SCRATCH: mapping a temporary file
+      !! FMMAP_OLD    : mapping an already existing file
+      !! FMMAP_NEW    : mapping a newly created created file
+      !! FMMAP_NOFILE : no physical file
    character(*),          intent(in)            :: filename 
-      !! FMMAP_OLD or FMMAP_new: name of the file (with or without path)
-      !! FMMAP_SCRATCH: name of the path; can be empty (="")
-      !!   if empty:
-      !!   - POSIX: is set to "." (current directory)
-      !!   - WIN32: the Windows temporary path is inquired     
-      !! - a processor dependent unique filename is generated and appended to the path
+      !! FMMAP_OLD or FMMAP_NEW: 
+      !! - name of the file (with or without path)
+      !! FMMAP_SCRATCH: 
+      !! - name of the path where the temporary file is created; if blank:
+      !!   - POSIX: the current directory ("./") is used
+      !!   - WIN32: the Windows temporary path is inquired and used 
+      !! - a processor dependent unique filename is then generated and appended to the path
+      !! FMMAP_NOFILE:
+      !! - must be empty ("")
    integer(fmmap_size_t), intent(in),  optional :: length 
       !! Length of the mapping in number of bytes
-      !! Required with FMMAP_SCRATCH or FMMAP_NEW
-      !! - the size of the file is then length bytes
+      !! Required with FMMAP_SCRATCH, FMMAP_NEW, and FMMAP_NOFILE
+      !! - the size of the file (or virtual file) is then length bytes
       !! Must not be present with FMMAP_OLD
       !! - the length can be later inquired with x%lenght()
    logical,               intent(in),  optional :: private
-      !! if .true., all the changes made to the mapped file stay only in memory
-      !! and are not written back to the file.
-      !! .false. by default
+      !! if .true., all the changes made to the mapped file are visible only by the current
+      !  mapping. All concurrent accesses to the file see the original data and not the 
+      !! changes. Technically the changes are permanently cached in memory pages dedicated
+      !! to current mapping.
+      !! - .false. by default with FMMAP_NEW, FMMAP_OLD, and FMMAP_SCRATCH
+      !! - .true. by default with FMMAP_NOFILE 
    integer,               intent(out), optional :: stat
       !! return status; is 0 if no error occurred
    
@@ -179,15 +185,12 @@ contains
    if (present(private)) cx%private = private  
    
    if (filestatus == FMMAP_SCRATCH) then
-      if (.not.(filename.streq.FMMAP_TMPDIR) .and. len_trim(filename) == 0) then
-         error stop msgpre//"filename must not be empty with FMMAP_SCRATCH"
-      end if
       if (.not.present(length)) then
          error stop msgpre//"length must be present with FMMAP_SCRATCH"
       end if
       cx%n = length
    else if (filestatus == FMMAP_NOFILE) then
-      if (.not.(filename.streq."")) then
+      if (len(filename) /= 0) then
          error stop msgpre//"filename must be empty with FMMAP_NOFILE"
       end if
       if (.not.present(length)) then
@@ -200,7 +203,7 @@ contains
       cx%anon = .true.
    else if (filestatus == FMMAP_NEW) then
       if (len_trim(filename) == 0) then
-         error stop msgpre//"filename must not be empty with FMMAP_NEW"
+         error stop msgpre//"filename must not be blank with FMMAP_NEW"
       end if
       if (.not.present(length)) then
          error stop msgpre//"length must be present with FMMAP_NEW"
@@ -225,7 +228,7 @@ contains
       end if
    else if (filestatus == FMMAP_OLD) then
       if (len_trim(filename) == 0) then
-         error stop msgpre//"filename must not be empty with FMMAP_OLD"
+         error stop msgpre//"filename must not be blank with FMMAP_OLD"
       end if
       if (present(length)) then
          error stop msgpre//"length must not be present with FMMAP_OLD"
@@ -295,7 +298,10 @@ contains
    type(fmmap_t), intent(inout)           :: x 
       !! descriptor of the mapped file
    logical,     intent(in)   , optional :: writeback  
-      !! if .true., the changes in memory in the copyonwrite mode are written back to the file
+      !! If .true., the changes in memory in the private mode are written back to the file 
+      !! before unmapping.
+      !! .false. by default with FFMAP_SCRATCH, FMMAP_OLD, and FFMAP_NOFILE
+      !! .true. by default with FMMAP_NEW 
    integer,               intent(out),  optional :: stat
       !! return status, is 0 if no error occurred
    
@@ -315,7 +321,8 @@ contains
       exit BODY
    end if
          
-   wb = (cx% filestatus == FMMAP_NEW .and. cx% private); if (present(writeback)) wb = writeback
+   wb = (cx% filestatus == FMMAP_NEW .and. cx% private)
+   if (present(writeback)) wb = writeback
    if (wb) then
       if (.not. cx% private) then
          error stop msgpre//"writeback must be .false. if private was .false."

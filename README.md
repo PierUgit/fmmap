@@ -12,6 +12,8 @@ These routines provide *some* of the features of the posix or Windows memory map
 
 Private mapping is possible, with optional write-back of the modifications to the file. Such mapping can be useful when one doesn't want to modify the file on disk, or when one wants to work only in memory and decide when to update (or not) the file. 
 
+Anonmymous mapping is also possible, i.e. allocating virtual memory without a physical backing file. This is actually what the C malloc() is generally doing when the allocated size is above some threshold.   
+
 ## Usage
 
 The interface manipulates bytes and returns a C pointer. The programmer has to manage the conversion between elements and bytes (the module provides some functions for the conversions), and between the C and a Fortran pointer. 
@@ -131,12 +133,14 @@ Windows 10 MSYS2 / gcc-gfortran 13
 Linux Debian 11  / Intel icc-ifort 2021 (without fpm)  
 Lubuntu 22.04    / gcc-gfortran 11 (without fpm)
 
-### Known issues
+### Known compilation issues
 
 Under Windows MSYS2 the `_WIN32` macro is not defined in gfortran (while it is in gcc). I don't know how it is under environments others than MSYS2. The fix is to pass it explicitly: `fpm test --flag "-D_WIN32"`
 
 ## Limitations
 
+- It is assumed that the Fortran file storage unit is a byte. This is checked in the
+  routines.
 - The whole file is mapped, it's not possible to map only a portion of it
 - The access is always read+write, there's no option to restrict it
 - The file is always opened with non-blocking access (i.e. it can be opened again by the
@@ -145,3 +149,10 @@ Under Windows MSYS2 the `_WIN32` macro is not defined in gfortran (while it is i
 - Mapping to an array of a derived type containing allocatable or pointer components is 
   not allowed (well, it's technically possible, but the memory allocated by these  
   components won't be part of the mapping).
+
+## Known issues
+
+There's probably a bug around, as testing FMMAP_NOFILE alone is OK, while testing
+it after some other tests with FMMAP_OLD can result is a crash when unmapping. After 
+many investigations I temporarily gave up... FMMAP_NOFILE has little interest anyway,
+as it does nothing more than a simple 'allocate()'.
