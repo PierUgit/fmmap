@@ -1,4 +1,4 @@
-# fmmap 0.9.0 : memory mapped files in Fortran
+# fmmap 0.10.0 : memory mapped files in Fortran
 
 See also the ["detailed" documentation](doc/index.md)
 
@@ -33,16 +33,16 @@ end type
 type(sometype), pointer :: pt(:)
 type(fmmap_t) :: x
 
-integer(fst) :: n, nbytes
+integer(fst) :: n, length
 ...
 ...
 n = 10_fst ** 9   !! can be larger than RAM+swap space
 
 !> converts n elements to a number of bytes
-nbytes = fmmap_elem2byte(n, storage_size(pt)) 
+length = fmmap_elem2byte(n, storage_size(pt)) 
 
 !> creates a mapping to a temporary file
-call fmmap_create(x, FMMAP_SCRATCH, "", nbytes)
+call fmmap_create(x, FMMAP_SCRATCH, "", length)
 
 !> conversion to a Fortran pointer
 call c_f_pointer(x%cptr(), pt, [n])       
@@ -63,15 +63,15 @@ use ffmap_m, fst => fmmap_size_t
 
 integer, pointer, contiguous :: pi(:,:), tmpi(:,:)
 type(fmmap_t) :: x
-integer(fst) :: n
+integer(fst) :: n, length
 ...
 n = 1000_fst   !! can be larger than RAM+swap space
 
 !> converts n*n elements to a number of bytes
-nbytes = fmmap_elem2byte(n*n, storage_size(pi)) 
+length = fmmap_elem2byte(n*n, storage_size(pi)) 
 
 !> Mapping to a new named file
-call fmmap_create(x, FMMAP_NEW, "./foo1.bin", nbytes) 
+call fmmap_create(x, FMMAP_NEW, "./foo1.bin", length) 
 
 !> conversion to a Fortran pointer, in 2 stages because we need a lower bound /= 1
 call c_f_pointer(x%cptr(), tmpi, [n,n])      
@@ -93,12 +93,12 @@ use ffmap_m, fst => fmmap_size_t
 
 integer, pointer :: pi(:)
 type(fmmap_t) :: x
-integer(fst) :: n
+integer(fst) :: n, length
 ...
 
 !> Mapping to a existing named file
-call fmmap_create(x, nbytes, FMMAP_OLD, "./foo1.bin", private=.true.) 
-n = fmmap_byte2elem(x%length(), storage_size(pi))
+call fmmap_create(x, nbytes, FMMAP_OLD, "./foo1.bin", length, private=.true.) 
+n = fmmap_byte2elem(length, storage_size(pi))
 !> Conversion to a Fortran pointer
 call c_f_pointer(x%cptr(), pi, [n])      
                     
@@ -139,20 +139,12 @@ Under Windows MSYS2 the `_WIN32` macro is not defined in gfortran (while it is i
 
 ## Limitations
 
-- It is assumed that the Fortran file storage unit is a byte. This is checked in the
-  routines.
+- It is assumed that the Fortran file storage unit is a byte. This is checked in the routines.
 - The whole file is mapped, it's not possible to map only a portion of it
 - The access is always read+write, there's no option to restrict it
-- The file is always opened with non-blocking access (i.e. it can be opened again by the
-  same process or another process), which corresponds to the usual behavior on posix
-  systems but not Windows. 
-- Mapping to an array of a derived type containing allocatable or pointer components is 
-  not allowed (well, it's technically possible, but the memory allocated by these  
-  components won't be part of the mapping).
+- The file is always opened with non-blocking access (i.e. it can be opened again by the same process or another process), which corresponds to the usual behavior on posix systems but not Windows. 
+- Mapping to an array of a derived type containing allocatable or pointer components is not allowed (well, it's technically possible, but the memory allocated by these components won't be part of the mapping).
 
 ## Known issues
 
-There's probably a bug around, as testing FMMAP_NOFILE alone is OK, while testing
-it after some other tests with FMMAP_OLD can result is a crash when unmapping. After 
-many investigations I temporarily gave up... FMMAP_NOFILE has little interest anyway,
-as it does nothing more than a simple 'allocate()'.
+None... 
