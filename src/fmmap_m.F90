@@ -43,10 +43,8 @@ implicit none
    end type
       
    !> predefined values for the `filestatus` argument
-   integer, parameter :: FMMAP_SCRATCH = 1
-   integer, parameter :: FMMAP_OLD     = 2
-   integer, parameter :: FMMAP_NEW     = 3
-   integer, parameter :: FMMAP_NOFILE  = 4
+#define FMMAP_LANG_F
+#include "constants.h"
 
    
    interface

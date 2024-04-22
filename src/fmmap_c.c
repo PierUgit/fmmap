@@ -17,15 +17,10 @@
 #include <sys/mman.h>
 #endif
 
-/*
-filestatus = 1: scratch file
-             2: open an existing file
-             3: create a new file
-           
-error codes:
-    (later)
-*/
 
+// predefined values for the `filestatus` argument
+#define FMMAP_LANG_C
+#include "constants.h"
 
 typedef struct {
     void*     ptr;
@@ -50,7 +45,7 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
 //----------------------------------------------------
 #ifdef _WIN32
 //---------------------WIN32--------------------------
-    if (x->filestatus == 1) {
+    if (x->filestatus == FMMAP_SCRATCH) {
 
         // build temp file name
         char path[MAX_PATH], tmpname[MAX_PATH];
@@ -84,7 +79,7 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
                                 , NULL );
         if (x->filedes == INVALID_HANDLE_VALUE) return 111;
 	    
-    } else if (x->filestatus == 4) {
+    } else if (x->filestatus == FMMAP_NOFILE) {
     
         x->filedes = INVALID_HANDLE_VALUE;
         
@@ -116,14 +111,14 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
     if (x->ptr == NULL) return 122;
     
     // close the file
-    if (x->filestatus != 4) {
+    if (x->filestatus != FMMAP_NOFILE) {
         stat = (int)CloseHandle(x->filedes);
             if (stat == 0) return 131;
     }
 //----------------------------------------------------
 #else
 //---------------------POSIX--------------------------
-    if (x->filestatus == 1) {
+    if (x->filestatus == FMMAP_SCRATCH) {
 
         // build temp file name
         char tmpname[1024];
@@ -145,7 +140,7 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
         stat = ftruncate(x->filedes, x->n);
             if (stat != 0) return 101;
 	
-	} else if (x->filestatus == 4) {
+	} else if (x->filestatus == FMMAP_NOFILE) {
 	
 	    x->filedes = -1;
     
@@ -165,14 +160,14 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
                   , (size_t)x->n                  
                   , PROT_READ | PROT_WRITE      
                   ,   (x->private ? MAP_PRIVATE : MAP_SHARED) 
-                    | (x->filestatus == 4 ? MAP_ANONYMOUS : 0) 
+                    | (x->filestatus == FMMAP_NOFILE ? MAP_ANONYMOUS : 0) 
                     | MAP_NORESERVE  
                   , x->filedes                         
                   , 0 );
     if (x->ptr == MAP_FAILED) return 121;
     
     // close the file
-    if (x->filestatus != 4) {
+    if (x->filestatus != FMMAP_NOFILE) {
         stat = close(x->filedes);
             if (stat != 0) return 131;
     } 
@@ -206,7 +201,7 @@ int c_mmap_destroy( fmmap_t* x, const bool wb ) {
             if (stat == 0) return 202;
 	    
     }
-    if (x->filestatus == 2 || x->filestatus == 3) {
+    if (x->filestatus == FMMAP_NEW || x->filestatus == FMMAP_OLD) {
         // flushing for the NEW and OLD cases
         stat = (int)FlushViewOfFile(x->ptr,0);   // not sure it's needed
             if (stat == 0) return 211;
@@ -223,7 +218,7 @@ int c_mmap_destroy( fmmap_t* x, const bool wb ) {
         // writeback case, new mapping in shared mode
         fmmap_t y;
         y.n = x->n;
-        y.filestatus = 2;
+        y.filestatus = FMMAP_OLD;
         y.private = false;
         stat = c_mmap_create( &y, x->filename );
             if (stat != 0) return 201;
@@ -231,7 +226,7 @@ int c_mmap_destroy( fmmap_t* x, const bool wb ) {
         stat = c_mmap_destroy( &y, false );
             if (stat != 0) return 202;
     }
-    if (x->filestatus == 2 || x->filestatus == 3) {
+    if (x->filestatus == FMMAP_NEW || x->filestatus == FMMAP_OLD) {
         // flushing for the NEW and OLD cases
         stat = msync(x->ptr, (size_t)x->n, MS_SYNC);
         if (stat != 0) return 211;
@@ -243,7 +238,7 @@ int c_mmap_destroy( fmmap_t* x, const bool wb ) {
 #endif
 //----------------------------------------------------
 
-    if (x->filestatus != 4) free( x->filename );
+    if (x->filestatus != FMMAP_NOFILE) free( x->filename );
 
     return 0;
 }
