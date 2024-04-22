@@ -28,6 +28,11 @@ length = fmmap_elem2byte( n2, storage_size(pr) )
 call fmmap_create( x, FMMAP_NOFILE, "", length )
 call c_f_pointer( x%cptr(), pr, [n2] )
 pr(:) = 42d0
+allocate( pi1(n2), source = 0 )
+if (any(pr /= 42d0)) then
+   print*, "FAILED"
+end if
+deallocate( pi1 )
 call fmmap_destroy( x )
 
 print*, "PASSED"
