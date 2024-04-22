@@ -13,6 +13,14 @@ See also the [README](../README.md)
 
 The files are opened with non-blocking read and write accesses, which means that nothing prevents multiples threads or other processes to concurrently open and write into the same files. This is the responsability of the user to take car of that.
 
+### Error status
+
+In case of incorrect or inconsistent input arguments, the routines always print an explicit message and the program aborts.
+
+In case something goes unexpectedly wrong internally (file can't be opened, or mapped, or closed...):
+- if the output `stat` argument is present the routines return an error code and the execution continues. The specific error can be inquired with the `fmmap_errmsg()` function.
+-  if the output `stat` argument is not present, the routines print an explicit message and the program aborts.
+
 ## Module
 
 `use fmmap_m`
