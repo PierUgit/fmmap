@@ -39,7 +39,6 @@ typedef struct {
     int       filedes;
 #endif
     bool      private;
-    bool      anon;
 } fmmap_t;
 
 
@@ -107,8 +106,8 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
 	}
 
     // map file and define a view
-    DWORD nhi = (n >> 32);
-    DWORD nlo = n - (nhi << 32)
+    DWORD nhi = (x->n >> 32);
+    DWORD nlo = x->n - ((size_t)nhi << 32);
     x->mapdes = CreateFileMappingA(x->filedes,NULL,PAGE_READWRITE,nhi,nlo,NULL); 
         if (x->mapdes == NULL)   return 121;
     x->ptr = MapViewOfFile( x->mapdes
@@ -117,7 +116,7 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
     if (x->ptr == NULL) return 122;
     
     // close the file
-    if (! x->anon) {
+    if (x->filestatus != 4) {
         stat = (int)CloseHandle(x->filedes);
             if (stat == 0) return 131;
     }
@@ -166,14 +165,14 @@ int c_mmap_create( fmmap_t* x, const char* filename) {
                   , (size_t)x->n                  
                   , PROT_READ | PROT_WRITE      
                   ,   (x->private ? MAP_PRIVATE : MAP_SHARED) 
-                    | (x->anon ? MAP_ANONYMOUS : 0) 
+                    | (x->filestatus == 4 ? MAP_ANONYMOUS : 0) 
                     | MAP_NORESERVE  
                   , x->filedes                         
                   , 0 );
     if (x->ptr == MAP_FAILED) return 121;
     
     // close the file
-    if (! x->anon) {
+    if (x->filestatus != 4) {
         stat = close(x->filedes);
             if (stat != 0) return 131;
     } 
@@ -244,7 +243,7 @@ int c_mmap_destroy( fmmap_t* x, const bool wb ) {
 #endif
 //----------------------------------------------------
 
-    free( x->filename );
+    if (x->filestatus != 4) free( x->filename );
 
     return 0;
 }

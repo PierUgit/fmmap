@@ -31,7 +31,6 @@ implicit none
       integer(c_int)         :: filedes
 #endif
       logical(c_bool)        :: private = .false.
-      logical(c_bool)        :: anon = .false.
    end type
    
    type :: fmmap_t   ! public descriptor
@@ -200,7 +199,6 @@ contains
          error stop msgpre//"private must be .true. with FMMAP_NOFILE"
       end if
       cx%n = length
-      cx%anon = .true.
    else if (filestatus == FMMAP_NEW) then
       if (len_trim(filename) == 0) then
          error stop msgpre//"filename must not be blank with FMMAP_NEW"
@@ -209,7 +207,6 @@ contains
          error stop msgpre//"length must be present with FMMAP_NEW"
       end if
       cx%n = length
-      cx%anon = .false.
       open(newunit=lu,file=trim(filename),status='new' &
           ,form='unformatted',access='stream',iostat=stat___)
       if (stat___ /= 0) then
