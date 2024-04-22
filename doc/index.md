@@ -7,7 +7,7 @@ See also the [README](../README.md)
 ### Private feature:
 
 - The mapped file can still be bigger than the RAM+swap size, however the amount of writes is limited by the RAM+swap size (to overcome this, one can close the mapping with write-back and remap the file
-- Currently, write-back means the entire file is rewritten, whatever the amount of modifications. This can be inefficient. If the underlying filesystem natively supports copy-on-write, a better strategy consists in creating a copy of the file with a system call, and mapping the copy without Copy-on-Write.
+- Currently, write-back means the entire file is rewritten, whatever the amount of modifications. This can be inefficient. If the underlying filesystem natively supports copy-on-write, a better strategy consists in creating a copy of the file with a system call, and mapping the copy without the private feature.
 
 ### Non blocking access
 
@@ -21,7 +21,7 @@ The files are opened with non-blocking read and write accesses, which means that
 
 `fmmap_size_t` : integer kind used for the sizes in the interfaces. 
 - the range of `integer(kind=fmmap_size_t)` is large enough to handle any possible file
-- generally corresponds to `int64`, but without guarantee
+- generally corresponds to `int64`, but without any guarantee
 
 ## public types
 
@@ -30,8 +30,6 @@ The files are opened with non-blocking read and write accesses, which means that
 public type bound procedures, `type(fmmap_t) :: x`
 
 `type(c_ptr) x%cptr()` : returns the C pointer of the mapping
-
-`integer(fmmap_size_t) x%length()` : returns the length of the mapping, in bytes
 
 ## public constants
 
@@ -68,12 +66,12 @@ public type bound procedures, `type(fmmap_t) :: x`
       !! - a processor dependent unique filename is then generated and appended to the path
       !! FMMAP_NOFILE:
       !! - must be empty ("")
-   integer(fmmap_size_t), intent(in),  optional :: length 
-      !! Length of the mapping in number of bytes
-      !! Required with FMMAP_SCRATCH, FMMAP_NEW, and FMMAP_NOFILE
-      !! - the size of the file (or virtual file) is then length bytes
-      !! Must not be present with FMMAP_OLD
-      !! - the length can be later inquired with x%lenght()
+   integer(fmmap_size_t), intent(inout)         :: length 
+      !! FMMAP_SCRATCH, FMMAP_NEW, and FMMAP_NOFILE:
+      !!    input length of the mapping (in number of bytes)
+      !! FMMAP_OLD:
+      !!    output length of the mapping (in number of bytes)
+      !! This is actually the size of the file (or virtual file)
    logical,               intent(in),  optional :: private
       !! if .true., all the changes made to the mapped file are visible only by the current
       !  mapping. All concurrent accesses to the file see the original data and not the 
