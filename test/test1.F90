@@ -106,7 +106,7 @@ if (pi1b(10) /= pi1(10)) then
    error stop
 end if
 call fmmap_destroy(x)
-!call fmmap_destroy(y)
+call fmmap_destroy(y)
 
 print*, "PASSED"
 
