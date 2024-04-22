@@ -40,7 +40,6 @@ implicit none
       type(fmmap_s), allocatable :: cx
    contains
       procedure, public :: cptr => fmmap_get_cptr
-      procedure, public :: length => fmmap_get_length
    end type
       
    !> predefined values for the `filestatus` argument
@@ -147,12 +146,12 @@ contains
       !! - a processor dependent unique filename is then generated and appended to the path
       !! FMMAP_NOFILE:
       !! - must be empty ("")
-   integer(fmmap_size_t), intent(in),  optional :: length 
-      !! Length of the mapping in number of bytes
-      !! Required with FMMAP_SCRATCH, FMMAP_NEW, and FMMAP_NOFILE
-      !! - the size of the file (or virtual file) is then length bytes
-      !! Must not be present with FMMAP_OLD
-      !! - the length can be later inquired with x%lenght()
+   integer(fmmap_size_t), intent(inout)         :: length 
+      !! FMMAP_SCRATCH, FMMAP_NEW, and FMMAP_NOFILE:
+      !!    input length of the mapping (in number of bytes)
+      !! FMMAP_OLD:
+      !!    output length of the mapping (in number of bytes)
+      !! This is actually the size of the file (or virtual file)
    logical,               intent(in),  optional :: private
       !! if .true., all the changes made to the mapped file are visible only by the current
       !  mapping. All concurrent accesses to the file see the original data and not the 
@@ -184,16 +183,16 @@ contains
    if (present(private)) cx%private = private  
    
    if (filestatus == FMMAP_SCRATCH) then
-      if (.not.present(length)) then
-         error stop msgpre//"length must be present with FMMAP_SCRATCH"
+      if (length < 0) then
+         error stop msgpre//"length must be >=0 with FMMAP_SCRATCH"
       end if
       cx%n = length
    else if (filestatus == FMMAP_NOFILE) then
       if (len(filename) /= 0) then
          error stop msgpre//"filename must be empty with FMMAP_NOFILE"
       end if
-      if (.not.present(length)) then
-         error stop msgpre//"length must be present with FMMAP_NOFILE"
+      if (length < 0) then
+         error stop msgpre//"length must be >=0 with FMMAP_NOFILE"
       end if
       if (.not.cx%private) then
          error stop msgpre//"private must be .true. with FMMAP_NOFILE"
@@ -203,8 +202,8 @@ contains
       if (len_trim(filename) == 0) then
          error stop msgpre//"filename must not be blank with FMMAP_NEW"
       end if
-      if (.not.present(length)) then
-         error stop msgpre//"length must be present with FMMAP_NEW"
+      if (length < 0) then
+         error stop msgpre//"length must be >=0 with FMMAP_NEW"
       end if
       cx%n = length
       open(newunit=lu,file=trim(filename),status='new' &
@@ -227,15 +226,12 @@ contains
       if (len_trim(filename) == 0) then
          error stop msgpre//"filename must not be blank with FMMAP_OLD"
       end if
-      if (present(length)) then
-         error stop msgpre//"length must not be present with FMMAP_OLD"
-      end if
       inquire(file=trim(filename), size=cx%n)
       if (cx%n < 0) then
          stat___ = 2
          exit BODY
       end if
-      cx%n = cx%n
+      length = cx%n
    else
       error stop msgpre//"wrong filestatus"
    end if
@@ -271,20 +267,6 @@ contains
    fmmap_get_cptr = c_null_ptr
    if (allocated(x% cx)) fmmap_get_cptr = x% cx % ptr
    end function fmmap_get_cptr
-
-
-   !********************************************************************************************
-   function fmmap_get_length(x)
-   !********************************************************************************************
-   !! Returns the number of bytes that are mapped  
-   !********************************************************************************************
-   class(fmmap_t), intent(in) :: x
-      !! descriptor of the mapped file
-   integer(fmmap_size_t)      :: fmmap_get_length
-   !********************************************************************************************
-   fmmap_get_length = -1
-   if (allocated(x% cx)) fmmap_get_length = x% cx % n
-   end function fmmap_get_length
 
 
    !********************************************************************************************

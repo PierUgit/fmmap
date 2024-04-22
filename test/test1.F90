@@ -79,7 +79,7 @@ print*, "PASSED"
 print*
 print*, "Testing FMMAP_OLD"
 
-call fmmap_create( x, FMMAP_OLD, filename )
+call fmmap_create( x, FMMAP_OLD, filename, length )
 call c_f_pointer( x%cptr(), pi3, [n1,n1/2,2_fst] )
 if (pi3(1,1,1) /= 1 .or. pi3(n1,n1/2,2) /= -1) then
    print*, "FAILED"
@@ -93,11 +93,11 @@ print*, "PASSED"
 print*
 print*, "Testing FMMAP_OLD/multiple_maps"
 
-call fmmap_create( x, FMMAP_OLD, filename )
-n = fmmap_byte2elem( x%length(), storage_size(pi1b) )
+call fmmap_create( x, FMMAP_OLD, filename, length )
+n = fmmap_byte2elem( length, storage_size(pi1b) )
 call c_f_pointer( x%cptr(), pi1, [n] )
    print*, "     1st mapping ok"
-call fmmap_create( y, FMMAP_OLD, filename )
+call fmmap_create( y, FMMAP_OLD, filename, length )
 call c_f_pointer( y%cptr(), pi1b, [n] )
    print*, "     2nd mapping ok"
 pi1(10) = -999
@@ -134,8 +134,8 @@ print*, "PASSED"
 print*
 print*, "Testing FMMAP_OLD/private/writeback"
 
-call fmmap_create( x, FMMAP_OLD, filename, private=.true. )
-n = fmmap_byte2elem( x%length(), storage_size(pi1))
+call fmmap_create( x, FMMAP_OLD, filename, length, private=.true. )
+n = fmmap_byte2elem( length, storage_size(pi1))
 call c_f_pointer( x%cptr(), pi1, [n] )
 if (pi1(n) /= -1) then
    print*, "FAILED 1"
@@ -143,7 +143,7 @@ if (pi1(n) /= -1) then
 end if
 pi1(n/2) = 42
 call fmmap_destroy(x)
-call fmmap_create( x, FMMAP_OLD, filename, private=.true.)
+call fmmap_create( x, FMMAP_OLD, filename, length, private=.true.)
 call c_f_pointer( x%cptr(), pi1, [n] )
 if (pi1(n/2) /= 1) then
    print*, "FAILED 2", pi1(n/2)
@@ -151,7 +151,7 @@ if (pi1(n/2) /= 1) then
 end if
 pi1(n/2) = 42
 call fmmap_destroy( x, writeback=.true. )
-call fmmap_create( x, FMMAP_OLD, filename)
+call fmmap_create( x, FMMAP_OLD, filename, length)
 call c_f_pointer( x%cptr(), pi1, [n] )
 if (pi1(n/2) /= 42) then
    print*, "FAILED 3"
