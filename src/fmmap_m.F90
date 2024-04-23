@@ -1,4 +1,10 @@
 !***********************************************************************************************
+! Memory Mapped file in Fortran
+! Works both on Posix systems and Windows
+! Author: Pierre Hugonnet
+! Licence: GPL v3
+! https://github.com/PierUgit/fmmap
+!***********************************************************************************************
 module fmmap_m
 !***********************************************************************************************
 use, intrinsic :: iso_c_binding
