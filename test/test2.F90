@@ -22,20 +22,21 @@ filename = "./fun1.bin"
 
 
 print*
-print*, "Testing FMMAP_NOFILE"
+print*, "Testing FMMAP_SCRATCH large:"
 
-length = fmmap_elem2byte( n2, storage_size(pr) )
-call fmmap_create( x, FMMAP_NOFILE, "", length )
-call c_f_pointer( x%cptr(), pr, [n2] )
-pr(:) = 42d0
-allocate( pi1(n2), source = 0 )
-if (any(pr /= 42d0)) then
+length = fmmap_elem2byte( n3, storage_size(pr) )
+print*,  length/10**9, " GBytes"
+call fmmap_create( x, FMMAP_SCRATCH, "", length ) 
+call c_f_pointer( x%cptr(), pr, [n3] )
+pr(n3) = 42d0
+if (pr(n3) /= 42d0) then
    print*, "FAILED"
+   error stop
 end if
-deallocate( pi1 )
-call fmmap_destroy( x )
+call fmmap_destroy(x)
 
 print*, "PASSED"
+
 
 
 end program

@@ -1,7 +1,7 @@
 #ifdef FMMAP_LANG_F
 #define DECL() integer, parameter ::
 #else
-#define DECL() const int
+#define DECL() static const int
 #endif
    DECL() FMMAP_SCRATCH = 1;
    DECL() FMMAP_OLD     = 2;
