@@ -27,9 +27,6 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
 
 ## public kinds
 
-`fmmap_size_t` : integer kind used for the sizes in the interfaces. 
-- the range of `integer(kind=fmmap_size_t)` is large enough to handle any possible file
-- generally corresponds to `int64`, but without any guarantee
 
 ## public types
 
@@ -74,7 +71,7 @@ public type bound procedures, `type(fmmap_t) :: x`
       !! - a processor dependent unique filename is then generated and appended to the path
       !! FMMAP_NOFILE:
       !! - must be empty ("")
-   integer(fmmap_size_t), intent(inout)         :: length 
+   integer(c_size_t), intent(inout)         :: length 
       !! FMMAP_SCRATCH, FMMAP_NEW, and FMMAP_NOFILE:
       !!    input length of the mapping (in number of bytes)
       !! FMMAP_OLD:
@@ -123,9 +120,9 @@ public type bound procedures, `type(fmmap_t) :: x`
    !! `ss` is typically obtained with the intrinsic function `ss = storage_size(var)`,
    !!  where `var` is any variable of the manipulated type+kind
    !********************************************************************************************
-   integer(fmmap_size_t), intent(in) :: nelems   !! number of elements
-   integer,               intent(in) :: ss       !! storage size (in bits) of 1 element
-   integer(fmmap_size_t)             :: nbytes   !! number of bytes
+   integer(c_size_t), intent(in) :: nelems   !! number of elements
+   integer,           intent(in) :: ss       !! storage size (in bits) of 1 element
+   integer(c_size_t)             :: nbytes   !! number of bytes
 ```
 
 ### `fmmap_byte2elem`
@@ -138,9 +135,9 @@ public type bound procedures, `type(fmmap_t) :: x`
    !! `ss` is typically obtained with the intrinsic function `ss = storage_size(var)`,
    !!  where `var` is any variable of the manipulated type+kind
    !********************************************************************************************
-   integer(fmmap_size_t), intent(in) :: nbytes   !! number of nbytes
-   integer,               intent(in) :: ss       !! storage size (in bits) of 1 element
-   integer(fmmap_size_t)             :: nelems   !! number of elements
+   integer(c_size_t), intent(in) :: nbytes   !! number of nbytes
+   integer,           intent(in) :: ss       !! storage size (in bits) of 1 element
+   integer(c_size_t)             :: nelems   !! number of elements
 ```
 
 ### `fmmap_errmsg`

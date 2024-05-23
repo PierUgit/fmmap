@@ -1,4 +1,4 @@
-# fmmap 0.10.2 : memory mapped files in Fortran
+# fmmap 0.11.0 : memory mapped files in Fortran
 
 See also the ["detailed" documentation](doc/index.md)
 
@@ -22,8 +22,8 @@ The interface manipulates bytes and returns a C pointer. The programmer has to m
 ### Example 1
 
 ```fortran
-use iso_C_binding
-use ffmap_m, fst => fmmap_size_t
+use iso_C_binding, cst => c_size_t
+use ffmap_m
 
 type sometype
    integer :: i
@@ -33,10 +33,10 @@ end type
 type(sometype), pointer :: pt(:)
 type(fmmap_t) :: x
 
-integer(fst) :: n, length
+integer(cst) :: n, length
 ...
 ...
-n = 10_fst ** 9   !! can be larger than RAM+swap space
+n = 10_cst ** 9   !! can be larger than RAM+swap space
 
 !> converts n elements to a number of bytes
 length = fmmap_elem2byte(n, storage_size(pt)) 
@@ -58,14 +58,14 @@ call fmmap_destroy(x)
 ### basic example 2
 
 ```fortran
-use iso_C_binding
-use ffmap_m, fst => fmmap_size_t
+use iso_C_binding, cst => c_size_t
+use ffmap_m
 
 integer, pointer, contiguous :: pi(:,:), tmpi(:,:)
 type(fmmap_t) :: x
-integer(fst) :: n, length
+integer(cst) :: n, length
 ...
-n = 1000_fst   !! can be larger than RAM+swap space
+n = 1000_cst   !! can be larger than RAM+swap space
 
 !> converts n*n elements to a number of bytes
 length = fmmap_elem2byte(n*n, storage_size(pi)) 
@@ -88,12 +88,12 @@ call fmmap_destroy(x)
 ### Private mapping
 
 ```fortran
-use iso_C_binding
-use ffmap_m, fst => fmmap_size_t 
+use iso_C_binding, cst => c_size_t
+use ffmap_m
 
 integer, pointer :: pi(:)
 type(fmmap_t) :: x
-integer(fst) :: n, length
+integer(cst) :: n, length
 ...
 
 !> Mapping to a existing named file

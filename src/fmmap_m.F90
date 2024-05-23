@@ -12,21 +12,18 @@ use, intrinsic :: iso_fortran_env
 implicit none
 
    private
-   public :: fmmap_size_t, fmmap_t
+   public :: fmmap_t
    public :: FMMAP_SCRATCH, FMMAP_OLD, FMMAP_NEW, FMMAP_NOFILE
    public :: fmmap_byte2elem, fmmap_elem2byte
    public :: fmmap_create, fmmap_destroy
    public :: fmmap_errmsg
 
-   !> integer kind used for the sizes and and number of bytes or elements
-   integer, parameter :: fmmap_size_t = c_size_t
-         
    character(c_char) :: c
    integer, parameter :: bitsperbyte = storage_size(c)
    
    type, bind(C) :: fmmap_s   ! structure for the C interface
       type(c_ptr)            :: ptr = c_null_ptr
-      integer(fmmap_size_t)  :: n
+      integer(c_size_t)  :: n
       type(c_ptr)            :: filename
       integer(c_int)         :: filestatus
 #ifdef _WIN32
@@ -92,9 +89,9 @@ contains
    !! `ss` is typically obtained with the intrinsic function `ss = storage_size(var)`,
    !!  where `var` is any variable of the manipulated type+kind
    !********************************************************************************************
-   integer(fmmap_size_t), intent(in) :: nelems   !! number of elements
-   integer,               intent(in) :: ss       !! storage size (in bits) of 1 element
-   integer(fmmap_size_t)             :: nbytes   !! number of bytes
+   integer(c_size_t), intent(in) :: nelems   !! number of elements
+   integer,           intent(in) :: ss       !! storage size (in bits) of 1 element
+   integer(c_size_t)             :: nbytes   !! number of bytes
    !********************************************************************************************
    if (modulo(ss,bitsperbyte) /= 0) then
       error stop "*** fmmap_elem2byte(): the storage size is not a multiple of the number of bits per byte"
@@ -110,11 +107,11 @@ contains
    !! `ss` is typically obtained with the intrinsic function `ss = storage_size(var)`,
    !!  where `var` is any variable of the manipulated type+kind
    !********************************************************************************************
-   integer(fmmap_size_t), intent(in) :: nbytes   !! number of nbytes
-   integer,               intent(in) :: ss       !! storage size (in bits) of 1 element
-   integer(fmmap_size_t)             :: nelems   !! number of elements
+   integer(c_size_t), intent(in) :: nbytes   !! number of nbytes
+   integer,           intent(in) :: ss       !! storage size (in bits) of 1 element
+   integer(c_size_t)             :: nelems   !! number of elements
    
-   integer(fmmap_size_t) :: bytesperelem
+   integer(c_size_t) :: bytesperelem
    !********************************************************************************************
    if (modulo(ss,bitsperbyte) /= 0) then
       error stop "*** fmmap_byte2elem(): the storage size is not a multiple of the number of bits per byte"
@@ -150,7 +147,7 @@ contains
       !! - a processor dependent unique filename is then generated and appended to the path
       !! FMMAP_NOFILE:
       !! - must be empty ("")
-   integer(fmmap_size_t), intent(inout)         :: length 
+   integer(c_size_t), intent(inout)             :: length 
       !! FMMAP_SCRATCH, FMMAP_NEW, and FMMAP_NOFILE:
       !!    input length of the mapping (in number of bytes)
       !! FMMAP_OLD:

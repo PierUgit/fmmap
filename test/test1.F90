@@ -1,13 +1,13 @@
 program fmmaptest
-use iso_c_binding
-use fmmap_m, fst => fmmap_size_t
+use iso_c_binding, cst => c_size_t
+use fmmap_m
 implicit none
 
 type(fmmap_t) :: x, y
 double precision, pointer :: pr(:)
 integer, pointer :: pi1(:), pi2(:,:), pi3(:,:,:), pi1b(:)
 integer :: i, stat, lu
-integer(fst) :: n, n1, n2, length
+integer(cst) :: n, n1, n2, length
 character(len=:), allocatable :: filename
 
 type sometype
@@ -17,8 +17,8 @@ type sometype
 end type
 type(sometype), pointer :: pt(:)
 
-n1 = 1000_fst
-n2 = 10_fst ** 7
+n1 = 1000_cst
+n2 = 5 * 10_cst ** 6
 
 #ifdef _WIN32
 filename = "C:\Temp\fun1.bin"
@@ -63,7 +63,7 @@ print*
 print*, "Testing FMMAP_OLD"
 
 call fmmap_create( x, FMMAP_OLD, filename, length )
-call c_f_pointer( x%cptr(), pi3, [n1,n1/2,2_fst] )
+call c_f_pointer( x%cptr(), pi3, [n1,n1/2,2_cst] )
 if (pi3(1,1,1) /= 1 .or. pi3(n1,n1/2,2) /= -1) then
    print*, "FAILED"
    error stop

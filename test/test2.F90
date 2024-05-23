@@ -1,35 +1,49 @@
 program fmmaptest
-use iso_c_binding
-use fmmap_m, fst => fmmap_size_t
+use iso_c_binding, cst => c_size_t
+use fmmap_m
 implicit none
 
-type(fmmap_t) :: x, y
+type(fmmap_t) :: x
 double precision, pointer :: pr(:)
-integer, pointer :: pi1(:), pi2(:,:), pi3(:,:,:), pi1b(:)
 integer :: i, stat, lu
-integer(fst) :: n, n1, n2, n3, length
+integer(cst) :: n, n3, length
 character(len=:), allocatable :: filename
+character(len=128) :: str, dir
 
-n1 = 1000_fst
-n2 = 10_fst ** 7
-n3 = 2 * 10_fst ** 9
+print*, "Testing now very large allocations..."
+
+length = 16
+print*, "How much? (in GiB) (default=16)"
+read(*,"(A)") str
+if (str /= "") read(str,*) length
+length = length * 2**30
+
+print*, "Where? (default is . (posix) or C:\Temp (Windows))"
+read(*,"(A)") dir
+
+if (dir == "") then
+#ifdef _WIN32
+   dir = "C:\Temp"
+#else
+   dir = "."
+#endif
+end if
 
 #ifdef _WIN32
-filename = "C:\Temp\fun1.bin"
+   filename = trim(dir)//"\fun1.bin"
 #else
-filename = "./fun1.bin"
+   filename = trim(dir)//"/fun1.bin"
 #endif
-
 
 print*
 print*, "Testing FMMAP_SCRATCH large:"
 
-length = fmmap_elem2byte( n3, storage_size(pr) )
-print*,  length/10**9, " GBytes"
-call fmmap_create( x, FMMAP_SCRATCH, "", length ) 
+n3 = fmmap_byte2elem( length,  storage_size(pr) )
+print*,  length/2**30, " GiBytes"
+call fmmap_create( x, FMMAP_SCRATCH, dir, length ) 
 call c_f_pointer( x%cptr(), pr, [n3] )
-pr(n3) = 42d0
-if (pr(n3) /= 42d0) then
+pr(:) = 42d0
+if (pr(n3/2) /= 42d0) then
    print*, "FAILED"
    error stop
 end if
