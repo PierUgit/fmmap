@@ -1,5 +1,5 @@
 name = "fmmap"
-version = "0.11.0"
+version = "0.11.1"
 license = "GPL 3"
 author = "Pierre Hugonnet"
 maintainer = "Pierre Hugonnet"
@@ -8,11 +8,10 @@ copyright = "Copyright 2024, Pierre Hugonnet"
 auto-executables = true
 auto-tests = true
 auto-examples = true
-module-naming = false
+module-naming = true
 [install]
 library = false
 [fortran]
 implicit-typing = false
 implicit-external = false
 source-form = "free"
-

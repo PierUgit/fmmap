@@ -23,7 +23,7 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
 
 ## Module
 
-`use fmmap_m`
+`use fmmap`
 
 ## public kinds
 

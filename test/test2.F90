@@ -1,6 +1,6 @@
 program fmmaptest
 use iso_c_binding, cst => c_size_t
-use fmmap_m
+use fmmap
 implicit none
 
 type(fmmap_t) :: x

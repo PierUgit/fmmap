@@ -5,7 +5,7 @@
 ! Licence: GPL v3
 ! https://github.com/PierUgit/fmmap
 !***********************************************************************************************
-module fmmap_m
+module fmmap
 !***********************************************************************************************
 use, intrinsic :: iso_c_binding
 use, intrinsic :: iso_fortran_env
@@ -394,4 +394,4 @@ contains
    end function fmmap_errmsg
     
 
-end module fmmap_m
+end module fmmap
