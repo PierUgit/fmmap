@@ -23,7 +23,7 @@ The interface manipulates bytes and returns a C pointer. The programmer has to m
 
 ```fortran
 use iso_C_binding, cst => c_size_t
-use ffmap_m
+use ffmap
 
 type sometype
    integer :: i
@@ -59,7 +59,7 @@ call fmmap_destroy(x)
 
 ```fortran
 use iso_C_binding, cst => c_size_t
-use ffmap_m
+use ffmap
 
 integer, pointer, contiguous :: pi(:,:), tmpi(:,:)
 type(fmmap_t) :: x
@@ -89,7 +89,7 @@ call fmmap_destroy(x)
 
 ```fortran
 use iso_C_binding, cst => c_size_t
-use ffmap_m
+use ffmap
 
 integer, pointer :: pi(:)
 type(fmmap_t) :: x
