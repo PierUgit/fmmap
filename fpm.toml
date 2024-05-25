@@ -1,9 +1,13 @@
 name = "fmmap"
-version = "0.11.2"
+description = "Memory mapped files in Fortran"
+version = "0.11.3"
+categories = ["io"]
+keywords = ["mmap", "memory", "mapped", "files"]
 license = "GPL-3.0-only"
 author = "Pierre Hugonnet"
 maintainer = "Pierre Hugonnet"
 copyright = "Copyright 2024, Pierre Hugonnet"
+homepage = "https://github.com/PierUgit/fmmap"
 [build]
 auto-executables = true
 auto-tests = true
