@@ -40,14 +40,14 @@ print*, "Testing FMMAP_SCRATCH large:"
 
 n3 = fmmap_byte2elem( length,  storage_size(pr) )
 print*,  length/2**30, " GiBytes"
-call fmmap_create( x, FMMAP_SCRATCH, dir, length ) 
+call x% create( FMMAP_SCRATCH, dir, length )
 call c_f_pointer( x%cptr(), pr, [n3] )
 pr(:) = 42d0
 if (pr(n3/2) /= 42d0) then
    print*, "FAILED"
    error stop
 end if
-call fmmap_destroy(x)
+call x% destroy()
 
 print*, "PASSED"
 
