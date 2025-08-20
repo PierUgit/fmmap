@@ -38,7 +38,7 @@ end if
 print*
 print*, "Testing FMMAP_SCRATCH large:"
 
-n3 = fmmap_byte2elem( length,  storage_size(pr) )
+n3 = fmmap_b2e( length,  storage_size(pr) )
 print*,  length/2**30, " GiBytes"
 call x% create( FMMAP_SCRATCH, dir, length )
 call c_f_pointer( x%cptr(), pr, [n3] )

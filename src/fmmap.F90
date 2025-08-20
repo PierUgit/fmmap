@@ -14,7 +14,7 @@ implicit none
    private
    public :: fmmap_t
    public :: FMMAP_SCRATCH, FMMAP_OLD, FMMAP_NEW, FMMAP_NOFILE
-   public :: fmmap_byte2elem, fmmap_elem2byte
+   public :: fmmap_b2e, fmmap_e2b
    public :: fmmap_errmsg
 
    character(c_char) :: c
@@ -76,7 +76,7 @@ implicit none
 contains
 
    !********************************************************************************************
-   function fmmap_elem2byte(nelems,ss) result(nbytes)
+   function fmmap_e2b(nelems,ss) result(nbytes)
    !********************************************************************************************
    !! converts a number of elements to a number of bytes
    !! `ss` is typically obtained with the intrinsic function `ss = storage_size(var)`,
@@ -87,16 +87,16 @@ contains
    integer(c_size_t)             :: nbytes   !! number of bytes
    !********************************************************************************************
    if (modulo(ss,bitsperbyte) /= 0) then
-      error stop "*** fmmap_elem2byte(): the storage size is not a multiple of the number of bits per byte"
+      error stop "*** fmmap_e2b(): the storage size is not a multiple of the number of bits per byte"
    end if
    nbytes = nelems * (ss / bitsperbyte)
-   end function fmmap_elem2byte
+   end function fmmap_e2b
 
 
    !********************************************************************************************
-   function fmmap_byte2elem(nbytes,ss) result(nelems)
+   function fmmap_b2e(nbytes,ss) result(nelems)
    !********************************************************************************************
-   !! converts a number of bytes into a number of elements
+   !! converts a number of bytes to a number of elements
    !! `ss` is typically obtained with the intrinsic function `ss = storage_size(var)`,
    !!  where `var` is any variable of the manipulated type+kind
    !********************************************************************************************
@@ -107,14 +107,14 @@ contains
    integer(c_size_t) :: bytesperelem
    !********************************************************************************************
    if (modulo(ss,bitsperbyte) /= 0) then
-      error stop "*** fmmap_byte2elem(): the storage size is not a multiple of the number of bits per byte"
+      error stop "*** fmmap_b2e(): the storage size is not a multiple of the number of bits per byte"
    end if
    bytesperelem = ss / bitsperbyte
    nelems = nbytes / bytesperelem
    if (nelems * bytesperelem /= nbytes) then
-      error stop "*** fmmap_byte2elem(): the number of bytes does not form an integer number of elements"
+      error stop "*** fmmap_b2e(): the number of bytes does not form an integer number of elements"
    end if
-   end function fmmap_byte2elem
+   end function fmmap_b2e
 
 
    !********************************************************************************************
@@ -186,7 +186,7 @@ contains
       if (length < 0) then
          error stop msgpre//"length must be >=0 with FMMAP_SCRATCH"
       end if
-      cx%n = fmmap_elem2byte( length, ss )
+      cx%n = fmmap_e2b( length, ss )
    else if (filestatus == FMMAP_NOFILE) then
       if (len(filename) /= 0) then
          error stop msgpre//"filename must be empty with FMMAP_NOFILE"
@@ -197,7 +197,7 @@ contains
       if (.not.cx%private) then
          error stop msgpre//"private must be .true. with FMMAP_NOFILE"
       end if
-      cx%n = fmmap_elem2byte( length, ss )
+      cx%n = fmmap_e2b( length, ss )
    else if (filestatus == FMMAP_NEW) then
       if (len_trim(filename) == 0) then
          error stop msgpre//"filename must not be blank with FMMAP_NEW"
@@ -205,7 +205,7 @@ contains
       if (length < 0) then
          error stop msgpre//"length must be >=0 with FMMAP_NEW"
       end if
-      cx%n = fmmap_elem2byte( length, ss )
+      cx%n = fmmap_e2b( length, ss )
       open(newunit=lu,file=trim(filename),status='new' &
           ,form='unformatted',access='stream',iostat=stat___)
       if (stat___ /= 0) then
@@ -231,7 +231,7 @@ contains
          stat___ = 2
          exit BODY
       end if
-      length = fmmap_byte2elem( cx%n, ss )
+      length = fmmap_b2e( cx%n, ss )
    else
       error stop msgpre//"wrong filestatus"
    end if
@@ -286,7 +286,7 @@ contains
    ss = bitsperbyte; if (present(mold)) ss = storage_size(mold)
 
    fmmap_get_length = 0
-   if (allocated(x% cx)) fmmap_get_length = fmmap_byte2elem( x% cx % n, ss )
+   if (allocated(x% cx)) fmmap_get_length = fmmap_b2e( x% cx % n, ss )
    end function fmmap_get_length
 
 
