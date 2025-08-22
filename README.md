@@ -12,12 +12,26 @@ These routines provide *some* of the features of the posix or Windows memory map
 
 Private mapping is possible, with optional write-back of the modifications to the file. Such mapping can be useful when one doesn't want to modify the file on disk, or when one wants to work only in memory and decide when to update (or not) the file. 
 
-Anonmymous mapping is also possible, i.e. allocating virtual memory without a physical backing file. This is actually what the C malloc() is generally doing when the allocated size is above some threshold.   
+Anonmymous mapping is also possible, i.e. allocating virtual memory without a physical backing file. This is actually what the C malloc() generally does (and therefore also what the Fortran allocate() does) when the allocated size is above some threshold. This option is provided to easily switch between on-disk and in-memory only modes by just changing an argument in the calls. 
 
 ## Usage
 
-The interface manipulates bytes and returns a C pointer. The programmer has to manage the conversion between elements and bytes (the module provides some functions for the conversions), and between the C and a Fortran pointer. 
+The interface manipulates either bytes or array elements and returns a C pointer, which the user has to convert to a Fortran pointer. 
 
+The programmer can either manage themselves the conversion between elements and bytes (the module provides utility functions for the conversions), or provide the mapping routine an optional `mold=` argument with a variable of the same type+kind as the array that will receive the mapping. e.g. these 2 codes are equivalent:
+```fortran
+type(fmmap_t) :: x
+real(real64), pointer :: a(:)
+integer(c_size_t) :: n = 10**9, nbytes
+
+if (approach_1) then
+	nbytes = fmmap_e2b( n, storage_size(a) ) 
+	call x%create( FMMAP_SCRATCH, "", nbytes )
+else if (approach_2) then
+	call x%create( FMMAP_SCRATCH, "", n, mold=1.0_real64 )
+end if
+call c_f_pointer( x%cptr(), [n] )
+```
 
 ### Example 1
 
@@ -39,7 +53,7 @@ integer(cst) :: n, length
 n = 10_cst ** 9   !! can be larger than RAM+swap space
 
 !> converts n elements to a number of bytes
-length = fmmap_elem2byte(n, storage_size(pt)) 
+length = fmmap_e2b(n, storage_size(pt)) 
 
 !> creates a mapping to a temporary file
 call fmmap_create(x, FMMAP_SCRATCH, "", length)
@@ -71,7 +85,7 @@ n = 1000_cst   !! can be larger than RAM+swap space
 length = fmmap_elem2byte(n*n, storage_size(pi)) 
 
 !> Mapping to a new named file
-call fmmap_create(x, FMMAP_NEW, "./foo1.bin", length) 
+call x%create( FMMAP_NEW, "./foo1.bin", length) 
 
 !> conversion to a Fortran pointer, in 2 stages because we need a lower bound /= 1
 call c_f_pointer(x%cptr(), tmpi, [n,n])      
@@ -82,7 +96,7 @@ pi(0:n-1,1:n) => tmpi
 ! ...
 
 !> closes the mapping (the file is NOT deleted)
-call fmmap_destroy(x)
+call x%destroy()
 ```
 
 ### Private mapping
@@ -97,10 +111,9 @@ integer(cst) :: n, length
 ...
 
 !> Mapping to a existing named file
-call fmmap_create(x, nbytes, FMMAP_OLD, "./foo1.bin", length, private=.true.) 
-n = fmmap_byte2elem(length, storage_size(pi))
+call x%create( FMMAP_OLD, "./foo1.bin", n, mold=0, private=.true.) 
 !> Conversion to a Fortran pointer
-call c_f_pointer(x%cptr(), pi, [n])      
+call c_f_pointer( x%cptr(), pi, [n] )      
                     
 !> work on pi(:) as if it was a classical array
 !> All the changes are resident only in memory, the file is unmodified 
@@ -110,11 +123,11 @@ call c_f_pointer(x%cptr(), pi, [n])
 if (...) then
     !> Closes the mapping 
     !> All the changes are lost and the original file is kept
-    call fmmap_destroy(x)
+    call x%destroy()
 else
     !> Alternatively...
     !> All the changes are written back to the file before unmapping
-    call fmmap_destroy(x,writeback=.true.)
+    call x%destroy( writeback=.true. )
 end if
 ```
 

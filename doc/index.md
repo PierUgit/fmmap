@@ -32,9 +32,16 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
 
 `fmmap_t` : derived type holding the properties of the mapping, with no public component.
 
-public type bound procedures, `type(fmmap_t) :: x`
+## public type-bound procedures
 
-`type(c_ptr) x%cptr()` : returns the C pointer of the mapping
+`type(fmmap_t) :: x` 
+
+| TBP                          | module proc.   |                                            |
+| ---------------------------- | -------------- | ------------------------------------------ |
+| `x%create()`                 | `create()`     | creates a mapping                          |
+| `type(c_ptr) x%cptr()`       | `get_cptr()`   | returns the C pointer of the mapping       |
+| `integer(c_size_t) x%length` | `get_length()` | returns the size of the mapping (in bytes) |
+| `x%destroy()`                | `destroy()`    | destroys a mapping                         |
 
 ## public constants
 
@@ -43,80 +50,112 @@ public type bound procedures, `type(fmmap_t) :: x`
 `FMMAP_OLD`     : mapping of an existing file
 `FMMAP_NOFILE`  : mapping without a backing file (anonymous mapping)
 
-## public procedures 
+## procedures pointed by the type-bound procedures
 
-### `fmmap_create`
+### `fmmap_t_create`
 
-```    
+```Fortran
    !********************************************************************************************
-   subroutine fmmap_create(x,filestatus,filename,length,private,stat)
+   subroutine fmmap_t_create(x,filestatus,filename,length,mold,private,stat)
    !********************************************************************************************
-   !! Opens a file and creates a "generic" mapping to a C pointer.  
-   !! The whole file is mapped.  
+   !! Opens a file and creates a "generic" mapping to a C pointer.
+   !! The whole file is mapped.
    !********************************************************************************************
-   type(fmmap_t),         intent(out)           :: x
+   class(fmmap_t),        intent(out)           :: x
       !! descriptor of the mapped file
-   integer,               intent(in)            :: filestatus 
+   integer,               intent(in)            :: filestatus
       !! FMMAP_SCRATCH: mapping a temporary file
       !! FMMAP_OLD    : mapping an already existing file
       !! FMMAP_NEW    : mapping a newly created created file
       !! FMMAP_NOFILE : no physical file
-   character(*),          intent(in)            :: filename 
-      !! FMMAP_OLD or FMMAP_NEW: 
+   character(*),          intent(in)            :: filename
+      !! FMMAP_OLD or FMMAP_NEW:
       !! - name of the file (with or without path)
-      !! FMMAP_SCRATCH: 
+      !! FMMAP_SCRATCH:
       !! - name of the path where the temporary file is created; if blank:
       !!   - POSIX: the current directory ("./") is used
-      !!   - WIN32: the Windows temporary path is inquired and used 
+      !!   - WIN32: the Windows temporary path is inquired and used
       !! - a processor dependent unique filename is then generated and appended to the path
       !! FMMAP_NOFILE:
       !! - must be empty ("")
-   integer(c_size_t), intent(inout)         :: length 
+   integer(c_size_t)                            :: length
       !! FMMAP_SCRATCH, FMMAP_NEW, and FMMAP_NOFILE:
       !!    input length of the mapping (in number of bytes)
       !! FMMAP_OLD:
       !!    output length of the mapping (in number of bytes)
       !! This is actually the size of the file (or virtual file)
+      !! ` length`  is expressed in bytes if `mold` is absent, or in elements of the `mold`
+      !! type/kind if it is present
+   class(*),              intent(in),  optional :: mold(..)
+      !! if present, `length` is expressed in number of elements of the type/kind `mold`
    logical,               intent(in),  optional :: private
       !! if .true., all the changes made to the mapped file are visible only by the current
-      !  mapping. All concurrent accesses to the file see the original data and not the 
+      !  mapping. All concurrent accesses to the file see the original data and not the
       !! changes. Technically the changes are permanently cached in memory pages dedicated
       !! to current mapping.
       !! - .false. by default with FMMAP_NEW, FMMAP_OLD, and FMMAP_SCRATCH
-      !! - .true. by default with FMMAP_NOFILE 
+      !! - .true. by default with FMMAP_NOFILE
    integer,               intent(out), optional :: stat
       !! return status; is 0 if no error occurred
 ```
 
+### `fmmap_t_get_cptr`
 
-### `fmmap_destroy`
-
-```
+```Fortran
    !********************************************************************************************
-   subroutine fmmap_destroy_cptr(x,writeback,stat)
+   function fmmap_t_get_cptr(x) result(cptr)
+   !********************************************************************************************
+   !! Returns the C pointer of a mapped file
+   !********************************************************************************************
+   class(fmmap_t), intent(in) :: x
+      !! descriptor of the mapped file
+   type(c_ptr)                :: cptr
+```
+
+### `fmmap_t_get_length`
+
+```fortran
+   !********************************************************************************************
+   function fmmap_t_get_length(x,mold) result(length)
+   !********************************************************************************************
+   !! Returns the length of a mapped file
+   !********************************************************************************************
+   class(fmmap_t), intent(in)            :: x
+      !! descriptor of the mapped file
+   class(*),       intent(in),  optional :: mold(..)
+      !! if present, the returned length is expressed in number of elements of the type/kind `mold`
+   integer(c_size_t)                     :: length
+      !! in bytes if `mold` is absent, or in elements of the type/kind of ` mold` if present
+```
+
+### `fmmap_t_destroy`
+
+```Fortran
+   !********************************************************************************************
+   subroutine fmmap_t_destroy(x,writeback,stat)
    !********************************************************************************************
    !! Destroys a generic mapping
    !********************************************************************************************
-   type(fmmap_t), intent(inout)           :: x 
+   class(fmmap_t), intent(inout)          :: x
       !! descriptor of the mapped file
-   logical,     intent(in)   , optional :: writeback  
-      !! If .true., the changes in memory in the private mode are written back to the file 
+   logical,        intent(in),   optional :: writeback
+      !! If .true., the changes in memory in the private mode are written back to the file
       !! before unmapping.
       !! .false. by default with FFMAP_SCRATCH, FMMAP_OLD, and FFMAP_NOFILE
-      !! .true. by default with FMMAP_NEW 
-   integer,               intent(out),  optional :: stat
+      !! .true. by default with FMMAP_NEW
+   integer,       intent(out),   optional :: stat
       !! return status, is 0 if no error occurred
 ```
 
 ## Public utility procedures
 
-### `fmmap_elem2byte`
+### `fmmap_e2b`
 
 ```
    !********************************************************************************************
-   function fmmap_elem2byte(nelems,ss) result(nbytes)
+   function fmmap_e2b(nelems,ss) result(nbytes)
    !********************************************************************************************
-   !! converts a number of elements to a number of bytes  
+   !! converts a number of elements to a number of bytes
    !! `ss` is typically obtained with the intrinsic function `ss = storage_size(var)`,
    !!  where `var` is any variable of the manipulated type+kind
    !********************************************************************************************
@@ -125,13 +164,13 @@ public type bound procedures, `type(fmmap_t) :: x`
    integer(c_size_t)             :: nbytes   !! number of bytes
 ```
 
-### `fmmap_byte2elem`
+### `fmmap_b2e`
 
 ```
    !********************************************************************************************
-   function fmmap_byte2elem(nbytes,ss) result(nelems)
+   function fmmap_b2e(nbytes,ss) result(nelems)
    !********************************************************************************************
-   !! converts a number of bytes into a number of elements
+   !! converts a number of bytes to a number of elements
    !! `ss` is typically obtained with the intrinsic function `ss = storage_size(var)`,
    !!  where `var` is any variable of the manipulated type+kind
    !********************************************************************************************

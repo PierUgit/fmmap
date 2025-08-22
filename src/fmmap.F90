@@ -41,11 +41,11 @@ implicit none
       ! (which is not possible with bind(C) types)
       type(fmmap_s), allocatable :: cx
    contains
-      procedure, public :: create  => fmmap_create
-      procedure, public :: cptr    => fmmap_get_cptr
-      procedure, public :: length  => fmmap_get_length
-      procedure, public :: destroy => fmmap_destroy
-      final             ::            fmmap_final
+      procedure, public :: create  => fmmap_t_create
+      procedure, public :: cptr    => fmmap_t_get_cptr
+      procedure, public :: length  => fmmap_t_get_length
+      procedure, public :: destroy => fmmap_t_destroy
+      final             ::            fmmap_t_final
    end type
 
    !> predefined values for the `filestatus` argument
@@ -118,7 +118,7 @@ contains
 
 
    !********************************************************************************************
-   subroutine fmmap_create(x,filestatus,filename,length,mold,private,stat)
+   subroutine fmmap_t_create(x,filestatus,filename,length,mold,private,stat)
    !********************************************************************************************
    !! Opens a file and creates a "generic" mapping to a C pointer.
    !! The whole file is mapped.
@@ -252,25 +252,25 @@ contains
       error stop msg
    end if
 
-   end subroutine fmmap_create
+   end subroutine fmmap_t_create
 
 
    !********************************************************************************************
-   function fmmap_get_cptr(x)
+   function fmmap_t_get_cptr(x) result(cptr)
    !********************************************************************************************
    !! Returns the C pointer of a mapped file
    !********************************************************************************************
    class(fmmap_t), intent(in) :: x
       !! descriptor of the mapped file
-   type(c_ptr)                :: fmmap_get_cptr
+   type(c_ptr)                :: cptr
    !********************************************************************************************
-   fmmap_get_cptr = c_null_ptr
-   if (allocated(x% cx)) fmmap_get_cptr = x% cx % ptr
-   end function fmmap_get_cptr
+   cptr = c_null_ptr
+   if (allocated(x% cx)) cptr = x% cx % ptr
+   end function fmmap_t_get_cptr
 
 
    !********************************************************************************************
-   function fmmap_get_length(x,mold)
+   function fmmap_t_get_length(x,mold) result(length)
    !********************************************************************************************
    !! Returns the length of a mapped file
    !********************************************************************************************
@@ -278,20 +278,20 @@ contains
       !! descriptor of the mapped file
    class(*),       intent(in),  optional :: mold(..)
       !! if present, the returned length is expressed in number of elements of the type/kind `mold`
-   integer(c_size_t)                     :: fmmap_get_length
+   integer(c_size_t)                     :: length
       !! in bytes if `mold` is absent, or in elements of the type/kind of ` mold` if present
 
    integer :: ss
    !********************************************************************************************
    ss = bitsperbyte; if (present(mold)) ss = storage_size(mold)
 
-   fmmap_get_length = 0
-   if (allocated(x% cx)) fmmap_get_length = fmmap_b2e( x% cx % n, ss )
-   end function fmmap_get_length
+   length = 0
+   if (allocated(x% cx)) length = fmmap_b2e( x% cx % n, ss )
+   end function fmmap_t_get_length
 
 
    !********************************************************************************************
-   subroutine fmmap_destroy(x,writeback,stat)
+   subroutine fmmap_t_destroy(x,writeback,stat)
    !********************************************************************************************
    !! Destroys a generic mapping
    !********************************************************************************************
@@ -352,11 +352,11 @@ contains
       error stop msg
    end if
 
-   end subroutine fmmap_destroy
+   end subroutine fmmap_t_destroy
 
 
    !********************************************************************************************
-   impure elemental subroutine fmmap_final(x)
+   impure elemental subroutine fmmap_t_final(x)
    !********************************************************************************************
    !! Destroys a generic mapping
    !********************************************************************************************
@@ -374,7 +374,7 @@ contains
       if (stat > 0) error stop msg
    end if
 
-   end subroutine fmmap_final
+   end subroutine fmmap_t_final
 
 
    !********************************************************************************************
