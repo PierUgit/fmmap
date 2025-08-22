@@ -141,10 +141,10 @@ fpm test
 On Windows, the presence of the `_WIN32` macro is assumed
 
 ### Tested on
-macOS 10.13      / gcc-gfortran 13  
-Windows 11 MSYS2 / gcc-gfortran 13  
-Linux Debian 11  / Intel icc-ifort 2021 (without fpm)  
-Lubuntu 22.04    / gcc-gfortran 11 (without fpm)
+macOS 15   /   gcc-gfortran 14  
+Windows 11 MSYS2   /   gcc-gfortran 13  
+Linux Debian 11   /   Intel icc-ifort 2021
+v0.11.3: Lubuntu 22.04   /   gcc-gfortran 11 
 
 ### Known compilation issues
 
