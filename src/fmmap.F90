@@ -369,7 +369,7 @@ contains
    !********************************************************************************************
 
    if (allocated(x% cx)) then
-      call fmmap_destroy(x,stat=stat)
+      call fmmap_t_destroy(x,stat=stat)
       msg = msgpre//fmmap_errmsg(stat)
       if (stat > 0) error stop msg
    end if

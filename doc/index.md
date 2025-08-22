@@ -36,12 +36,12 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
 
 `type(fmmap_t) :: x` 
 
-| TBP                          | module proc.   |                                            |
-| ---------------------------- | -------------- | ------------------------------------------ |
-| `x%create()`                 | `create()`     | creates a mapping                          |
-| `type(c_ptr) x%cptr()`       | `get_cptr()`   | returns the C pointer of the mapping       |
-| `integer(c_size_t) x%length` | `get_length()` | returns the size of the mapping (in bytes) |
-| `x%destroy()`                | `destroy()`    | destroys a mapping                         |
+| type-bound procedure         | => module procedures |                                            |
+| ---------------------------- | -------------------- | ------------------------------------------ |
+| `x%create()`                 | `create()`           | creates a mapping                          |
+| `type(c_ptr) x%cptr()`       | `get_cptr()`         | returns the C pointer of the mapping       |
+| `integer(c_size_t) x%length` | `get_length()`       | returns the size of the mapping (in bytes) |
+| `x%destroy()`                | `destroy()`          | destroys a mapping                         |
 
 ## public constants
 

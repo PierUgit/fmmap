@@ -1,4 +1,4 @@
-# fmmap 0.11.3 : memory mapped files in Fortran
+# fmmap 1.0.0 : memory mapped files in Fortran
 
 See also the ["detailed" documentation](doc/index.md)
 
@@ -37,7 +37,7 @@ call c_f_pointer( x%cptr(), [n] )
 
 ```fortran
 use iso_C_binding, cst => c_size_t
-use ffmap
+use fmmap
 
 type sometype
    integer :: i
@@ -73,7 +73,7 @@ call fmmap_destroy(x)
 
 ```fortran
 use iso_C_binding, cst => c_size_t
-use ffmap
+use fmmap
 
 integer, pointer, contiguous :: pi(:,:), tmpi(:,:)
 type(fmmap_t) :: x
@@ -103,7 +103,7 @@ call x%destroy()
 
 ```fortran
 use iso_C_binding, cst => c_size_t
-use ffmap
+use fmmap
 
 integer, pointer :: pi(:)
 type(fmmap_t) :: x
@@ -142,7 +142,7 @@ On Windows, the presence of the `_WIN32` macro is assumed
 
 ### Tested on
 macOS 10.13      / gcc-gfortran 13  
-Windows 10 MSYS2 / gcc-gfortran 13  
+Windows 11 MSYS2 / gcc-gfortran 13  
 Linux Debian 11  / Intel icc-ifort 2021 (without fpm)  
 Lubuntu 22.04    / gcc-gfortran 11 (without fpm)
 
