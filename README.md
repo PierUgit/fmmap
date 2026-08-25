@@ -1,4 +1,4 @@
-# fmmap 1.0.0 : memory mapped files in Fortran
+# fmmap 1.1.0 : memory mapped files in Fortran
 
 See also the ["detailed" documentation](doc/index.md)
 
@@ -14,20 +14,33 @@ Private mapping is possible, with optional write-back of the modifications to th
 
 Anonmymous mapping is also possible, i.e. allocating virtual memory without a physical backing file. This is actually what the C malloc() generally does (and therefore also what the Fortran allocate() does) when the allocated size is above some threshold. This option is provided to easily switch between on-disk and in-memory only modes by just changing an argument in the calls. 
 
+## WARNING
+
+The use of the `mold=` optional argument in the `%create()` and `%length()` type bound procedures is potentially
+unsafe: if the actual argument is present but is a non-associated `pointer` or a non-allocated `allocatable` object,
+then it's like if it was not present, leading to mapped files with incorrect sizes.
+
+FOR SAFETY DO NOT PASS `pointer` or `allocatable` OBJECTS TO `mold=` AT THE MOMENT. 
+THIS WILL BE CORRECTED IN A FUTURE VERSION
+
 ## Usage
 
 The interface manipulates either bytes or array elements and returns a C pointer, which the user has to convert to a Fortran pointer. 
 
-The programmer can either manage themselves the conversion between elements and bytes (the module provides utility functions for the conversions), or provide the mapping routine an optional `mold=` argument with a variable of the same type+kind as the array that will receive the mapping. e.g. these 2 codes are equivalent:
+The programmer can either manage themselves the conversion between elements and bytes 
+(the module provides a utility functions to get the size in bytes of a scaler of any type), 
+or provide the mapping routine an optional `mold=` argument with a variable of the same 
+type+kind as the array that will receive the mapping. e.g. these 2 codes are equivalent:
 ```fortran
 type(fmmap_t) :: x
 real(real64), pointer :: a(:)
 integer(c_size_t) :: n = 10**9, nbytes
 
 if (approach_1) then
-	nbytes = fmmap_e2b( n, storage_size(a) ) 
+	nbytes = n * fmmap_sizeof( a ) 
 	call x%create( FMMAP_SCRATCH, "", nbytes )
 else if (approach_2) then
+   ! prefered approach
 	call x%create( FMMAP_SCRATCH, "", n, mold=1.0_real64 )
 end if
 call c_f_pointer( x%cptr(), [n] )
@@ -53,7 +66,7 @@ integer(cst) :: n, length
 n = 10_cst ** 9   !! can be larger than RAM+swap space
 
 !> converts n elements to a number of bytes
-length = fmmap_e2b(n, storage_size(pt)) 
+length = n * fmmap_sizeof( pt ) 
 
 !> creates a mapping to a temporary file
 call fmmap_create(x, FMMAP_SCRATCH, "", length)
@@ -77,15 +90,12 @@ use fmmap
 
 integer, pointer, contiguous :: pi(:,:), tmpi(:,:)
 type(fmmap_t) :: x
-integer(cst) :: n, length
+integer(cst) :: n
 ...
 n = 1000_cst   !! can be larger than RAM+swap space
 
-!> converts n*n elements to a number of bytes
-length = fmmap_elem2byte(n*n, storage_size(pi)) 
-
-!> Mapping to a new named file
-call x%create( FMMAP_NEW, "./foo1.bin", length) 
+!> Mapping to a new named file for n*n integer elements
+call x%create( FMMAP_NEW, "./foo1.bin", n*n, mold=0 ) 
 
 !> conversion to a Fortran pointer, in 2 stages because we need a lower bound /= 1
 call c_f_pointer(x%cptr(), tmpi, [n,n])      
@@ -107,7 +117,7 @@ use fmmap
 
 integer, pointer :: pi(:)
 type(fmmap_t) :: x
-integer(cst) :: n, length
+integer(cst) :: n
 ...
 
 !> Mapping to a existing named file
@@ -160,4 +170,4 @@ Under Windows MSYS2 the `_WIN32` macro is not defined in gfortran (while it is i
 
 ## Known issues
 
-None... 
+See the "Warning" section above

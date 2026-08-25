@@ -29,8 +29,7 @@ filename = "./fun1.bin"
 print*
 print*, "Testing FMMAP_SCRATCH:"
 
-length = fmmap_e2b( n1, storage_size(pr) )
-call x% create( FMMAP_SCRATCH, "", length )
+call x% create( FMMAP_SCRATCH, "", n1, mold=0d0 )
 call c_f_pointer( x%cptr(), pr, [n1] )
 pr = [(real(i), i=1,n1)]
 if (size(pr) /= n1 .or. pr(n1) /= n1) then
@@ -95,7 +94,7 @@ print*, "PASSED"
 print*
 print*, "Testing FMMAP_SCRATCH"
 
-length = fmmap_e2b( n2, storage_size(pt) )
+length = n2 * fmmap_sizeof( pt )
 print*, "     "//"creating scratch mapping of", length," bytes"
 call x% create( FMMAP_SCRATCH, "", length)
 call c_f_pointer( x%cptr(), pt, [n2] )

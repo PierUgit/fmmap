@@ -149,7 +149,32 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
 
 ## Public utility procedures
 
-### `fmmap_e2b`
+### `fmmap_sizeof` 
+
+```Fortran
+   !********************************************************************************************
+   function fmmap_sizeof(object) result(nbytes)
+   !********************************************************************************************
+   !! Returns the number of bytes occupied in memory by a scalar object of any type
+   !********************************************************************************************
+   class(*), intent(in) :: object(..)   !< object of any type (unlimited polymorphic)
+   integer(c_size_t) :: nbytes          !< number of bytes of a scalar of object type
+
+```
+
+### `fmmap_errmsg`
+
+```
+   !********************************************************************************************
+   function fmmap_errmsg(stat) result(msg)
+   !********************************************************************************************
+   !! Returns the error messages corresponding to an error code
+   !********************************************************************************************
+   integer, intent(in) :: stat
+   character(len=:), allocatable :: msg
+```
+
+### `fmmap_e2b` - DEPRECATED
 
 ```
    !********************************************************************************************
@@ -164,7 +189,7 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
    integer(c_size_t)             :: nbytes   !! number of bytes
 ```
 
-### `fmmap_b2e`
+### `fmmap_b2e` - DEPRECATED
 
 ```
    !********************************************************************************************
@@ -179,14 +204,3 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
    integer(c_size_t)             :: nelems   !! number of elements
 ```
 
-### `fmmap_errmsg`
-
-```
-   !********************************************************************************************
-   function fmmap_errmsg(stat) result(msg)
-   !********************************************************************************************
-   !! Returns the error messages corresponding to an error code
-   !********************************************************************************************
-   integer, intent(in) :: stat
-   character(len=:), allocatable :: msg
-```

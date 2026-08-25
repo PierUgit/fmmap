@@ -14,7 +14,7 @@ implicit none
    private
    public :: fmmap_t
    public :: FMMAP_SCRATCH, FMMAP_OLD, FMMAP_NEW, FMMAP_NOFILE
-   public :: fmmap_b2e, fmmap_e2b
+   public :: fmmap_sizeof, fmmap_b2e, fmmap_e2b
    public :: fmmap_errmsg
 
    character(c_char) :: c
@@ -76,8 +76,27 @@ implicit none
 contains
 
    !********************************************************************************************
+   !> @brief
+   !! Returns the number of bytes occupied in memory by a scalar object of any type
+   !********************************************************************************************
+   function fmmap_sizeof(object) result(nbytes)
+   !********************************************************************************************
+   class(*), intent(in) :: object(..)   !< object of any type (unlimited polymorphic)
+   integer(c_size_t) :: nbytes          !< number of bytes of a scalar of object type
+   !********************************************************************************************
+   nbytes = storage_size( object )
+   if (modulo(nbytes,int(bitsperbyte,kind=c_size_t)) /= 0) then
+      error stop "*** fmmap_sizeof(): the storage size of the object is not a multiple of the number of bits per byte"
+   end if
+   nbytes = nbytes / bitsperbyte
+   end function fmmap_sizeof
+   
+   
+   !********************************************************************************************
    function fmmap_e2b(nelems,ss) result(nbytes)
    !********************************************************************************************
+   !! DEPRECATED : USE fmmap_sizeof() INSTEAD
+   !!
    !! converts a number of elements to a number of bytes
    !! `ss` is typically obtained with the intrinsic function `ss = storage_size(var)`,
    !!  where `var` is any variable of the manipulated type+kind
@@ -96,6 +115,8 @@ contains
    !********************************************************************************************
    function fmmap_b2e(nbytes,ss) result(nelems)
    !********************************************************************************************
+   !! DEPRECATED : USE fmmap_sizeof() INSTEAD
+   !!
    !! converts a number of bytes to a number of elements
    !! `ss` is typically obtained with the intrinsic function `ss = storage_size(var)`,
    !!  where `var` is any variable of the manipulated type+kind
