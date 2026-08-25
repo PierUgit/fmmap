@@ -41,9 +41,14 @@ implicit none
       ! (which is not possible with bind(C) types)
       type(fmmap_s), allocatable :: cx
    contains
-      procedure, public :: create  => fmmap_t_create
+      private
+      procedure         :: create_elts  => fmmap_t_create_elts
+      procedure         :: create_bytes => fmmap_t_create_bytes
+      generic,   public :: create  => create_elts, create_bytes
       procedure, public :: cptr    => fmmap_t_get_cptr
-      procedure, public :: length  => fmmap_t_get_length
+      procedure         :: length_elts  => fmmap_t_get_length_elts
+      procedure         :: length_bytes => fmmap_t_get_length_bytes
+      generic,   public :: length  => length_elts, length_bytes
       procedure, public :: destroy => fmmap_t_destroy
       final             ::            fmmap_t_final
    end type
@@ -139,7 +144,7 @@ contains
 
 
    !********************************************************************************************
-   subroutine fmmap_t_create(x,filestatus,filename,length,mold,private,stat)
+   subroutine fmmap_t_create_elts(x,filestatus,filename,length,mold,private,stat)
    !********************************************************************************************
    !! Opens a file and creates a "generic" mapping to a C pointer.
    !! The whole file is mapped.
@@ -163,14 +168,71 @@ contains
       !! - must be empty ("")
    integer(c_size_t)                            :: length
       !! FMMAP_SCRATCH, FMMAP_NEW, and FMMAP_NOFILE:
-      !!    input length of the mapping (in number of bytes)
+      !!    input length of the mapping
       !! FMMAP_OLD:
-      !!    output length of the mapping (in number of bytes)
+      !!    output length of the mapping
       !! This is actually the size of the file (or virtual file)
-      !! ` length`  is expressed in bytes if `mold` is absent, or in elements of the `mold`
-      !! type/kind if it is present
-   class(*),              intent(in),  optional :: mold(..)
-      !! if present, `length` is expressed in number of elements of the type/kind `mold`
+      !! ` length`  is expressed in elements of the `mold` type/kind
+   class(*),              intent(in)            :: mold(..)
+      !! length` is expressed in number of elements of the type/kind `mold`
+   logical,               intent(in),  optional :: private
+      !! if .true., all the changes made to the mapped file are visible only by the current
+      !  mapping. All concurrent accesses to the file see the original data and not the
+      !! changes. Technically the changes are permanently cached in memory pages dedicated
+      !! to current mapping.
+      !! - .false. by default with FMMAP_NEW, FMMAP_OLD, and FMMAP_SCRATCH
+      !! - .true. by default with FMMAP_NOFILE
+   integer,               intent(out), optional :: stat
+      !! return status; is 0 if no error occurred
+
+   integer(c_size_t) :: length___
+   character(*), parameter :: msgpre = "*** fmmap_create_with_elts: "
+   !********************************************************************************************
+
+   if (file_storage_size /= bitsperbyte) then
+      error stop msgpre//"the file storage unit is not a byte"
+   end if
+   if (modulo(storage_size(mold),bitsperbyte) /= 0) then
+      error stop msgpre//"the storage size is not a multiple of the number of bits per byte"
+   end if
+
+   if (filestatus /= FMMAP_OLD) length___ = length * storage_size(mold) / bitsperbyte
+   call fmmap_t_create_bytes(x,filestatus,filename,length___,private,stat)
+   if (filestatus == FMMAP_OLD) length = length___ * bitsperbyte / storage_size(mold)
+
+   end subroutine fmmap_t_create_elts
+
+
+   !********************************************************************************************
+   subroutine fmmap_t_create_bytes(x,filestatus,filename,length,private,stat)
+   !********************************************************************************************
+   !! Opens a file and creates a "generic" mapping to a C pointer.
+   !! The whole file is mapped.
+   !********************************************************************************************
+   class(fmmap_t),        intent(out)           :: x
+      !! descriptor of the mapped file
+   integer,               intent(in)            :: filestatus
+      !! FMMAP_SCRATCH: mapping a temporary file
+      !! FMMAP_OLD    : mapping an already existing file
+      !! FMMAP_NEW    : mapping a newly created created file
+      !! FMMAP_NOFILE : no physical file
+   character(*),          intent(in)            :: filename
+      !! FMMAP_OLD or FMMAP_NEW:
+      !! - name of the file (with or without path)
+      !! FMMAP_SCRATCH:
+      !! - name of the path where the temporary file is created; if blank:
+      !!   - POSIX: the current directory ("./") is used
+      !!   - WIN32: the Windows temporary path is inquired and used
+      !! - a processor dependent unique filename is then generated and appended to the path
+      !! FMMAP_NOFILE:
+      !! - must be empty ("")
+   integer(c_size_t)                            :: length
+      !! FMMAP_SCRATCH, FMMAP_NEW, and FMMAP_NOFILE:
+      !!    input length of the mapping
+      !! FMMAP_OLD:
+      !!    output length of the mapping
+      !! This is actually the size of the file (or virtual file)
+      !! ` length`  is expressed in bytes
    logical,               intent(in),  optional :: private
       !! if .true., all the changes made to the mapped file are visible only by the current
       !  mapping. All concurrent accesses to the file see the original data and not the
@@ -183,7 +245,7 @@ contains
 
    integer :: ss, lu, stat___
    character(kind=c_char,len=:), allocatable :: c_filename
-   character(*), parameter :: msgpre = "*** fmmap_create: "
+   character(*), parameter :: msgpre = "*** fmmap_create_with_bytes: "
    character(:), allocatable :: msg
    !********************************************************************************************
 
@@ -191,7 +253,7 @@ contains
       error stop msgpre//"the file storage unit is not a byte"
    end if
 
-   ss = bitsperbyte; if (present(mold)) ss = storage_size(mold)
+   ss = bitsperbyte
 
    allocate( x% cx )
    stat___ = 0
@@ -273,7 +335,7 @@ contains
       error stop msg
    end if
 
-   end subroutine fmmap_t_create
+   end subroutine fmmap_t_create_bytes
 
 
    !********************************************************************************************
@@ -291,24 +353,41 @@ contains
 
 
    !********************************************************************************************
-   function fmmap_t_get_length(x,mold) result(length)
+   function fmmap_t_get_length_elts(x,mold) result(length)
    !********************************************************************************************
    !! Returns the length of a mapped file
    !********************************************************************************************
    class(fmmap_t), intent(in)            :: x
       !! descriptor of the mapped file
-   class(*),       intent(in),  optional :: mold(..)
-      !! if present, the returned length is expressed in number of elements of the type/kind `mold`
+   class(*),       intent(in)            :: mold(..)
+      !! the returned length is expressed in number of elements of the type/kind `mold`
    integer(c_size_t)                     :: length
-      !! in bytes if `mold` is absent, or in elements of the type/kind of ` mold` if present
-
-   integer :: ss
+      !! length in elements of the type/kind of ` mold`
+   
+   character(*), parameter :: msgpre = "*** fmmap_t_get_length_elts: "
    !********************************************************************************************
-   ss = bitsperbyte; if (present(mold)) ss = storage_size(mold)
-
+   if (modulo(storage_size(mold),bitsperbyte) /= 0) then
+      error stop msgpre//"the storage size is not a multiple of the number of bits per byte"
+   end if
+   
    length = 0
-   if (allocated(x% cx)) length = fmmap_b2e( x% cx % n, ss )
-   end function fmmap_t_get_length
+   if (allocated(x% cx)) length = x% cx % n * storage_size(mold) / bitsperbyte
+   end function fmmap_t_get_length_elts
+
+
+   !********************************************************************************************
+   function fmmap_t_get_length_bytes(x) result(length)
+   !********************************************************************************************
+   !! Returns the length in bytes of a mapped file
+   !********************************************************************************************
+   class(fmmap_t), intent(in)            :: x
+      !! descriptor of the mapped file
+   integer(c_size_t)                     :: length
+      !! length in bytes
+   !********************************************************************************************
+   length = 0
+   if (allocated(x% cx)) length = x% cx % n
+   end function fmmap_t_get_length_bytes
 
 
    !********************************************************************************************

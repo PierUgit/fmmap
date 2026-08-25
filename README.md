@@ -14,15 +14,6 @@ Private mapping is possible, with optional write-back of the modifications to th
 
 Anonmymous mapping is also possible, i.e. allocating virtual memory without a physical backing file. This is actually what the C malloc() generally does (and therefore also what the Fortran allocate() does) when the allocated size is above some threshold. This option is provided to easily switch between on-disk and in-memory only modes by just changing an argument in the calls. 
 
-## WARNING
-
-The use of the `mold=` optional argument in the `%create()` and `%length()` type bound procedures is potentially
-unsafe: if the actual argument is present but is a non-associated `pointer` or a non-allocated `allocatable` object,
-then it's like if it was not present, leading to mapped files with incorrect sizes.
-
-FOR SAFETY DO NOT PASS `pointer` or `allocatable` OBJECTS TO `mold=` AT THE MOMENT. 
-THIS WILL BE CORRECTED IN A FUTURE VERSION
-
 ## Usage
 
 The interface manipulates either bytes or array elements and returns a C pointer, which the user has to convert to a Fortran pointer. 
@@ -37,10 +28,11 @@ real(real64), pointer :: a(:)
 integer(c_size_t) :: n = 10**9, nbytes
 
 if (approach_1) then
+    ! legacy approach
 	nbytes = n * fmmap_sizeof( a ) 
 	call x%create( FMMAP_SCRATCH, "", nbytes )
 else if (approach_2) then
-   ! prefered approach
+    ! prefered approach
 	call x%create( FMMAP_SCRATCH, "", n, mold=1.0_real64 )
 end if
 call c_f_pointer( x%cptr(), [n] )
@@ -95,7 +87,7 @@ integer(cst) :: n
 n = 1000_cst   !! can be larger than RAM+swap space
 
 !> Mapping to a new named file for n*n integer elements
-call x%create( FMMAP_NEW, "./foo1.bin", n*n, mold=0 ) 
+call x%create( FMMAP_NEW, "./foo1.bin", n*n, mold=pi ) 
 
 !> conversion to a Fortran pointer, in 2 stages because we need a lower bound /= 1
 call c_f_pointer(x%cptr(), tmpi, [n,n])      
@@ -151,10 +143,10 @@ fpm test
 On Windows, the presence of the `_WIN32` macro is assumed
 
 ### Tested on
-macOS 15   /   gcc-gfortran 14  
+macOS 26   /   gcc-gfortran 16  
 Windows 11 MSYS2   /   gcc-gfortran 13  
-Linux Debian 11   /   Intel icc-ifort 2021
-v0.11.3: Lubuntu 22.04   /   gcc-gfortran 11 
+Linux Debian 11   /   Intel icc-ifort 2021  
+(up to v0.11.3: Lubuntu 22.04   /   gcc-gfortran 11)
 
 ### Known compilation issues
 
@@ -170,4 +162,4 @@ Under Windows MSYS2 the `_WIN32` macro is not defined in gfortran (while it is i
 
 ## Known issues
 
-See the "Warning" section above
+None...

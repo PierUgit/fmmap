@@ -11,15 +11,20 @@ See also the [README](../README.md)
 
 ### Non blocking access
 
-The files are opened with non-blocking read and write accesses, which means that nothing prevents multiples threads or other processes to concurrently open and write into the same files. This is the responsability of the user to take car of that.
+The files are opened with non-blocking read and write accesses, which means that nothing 
+prevents multiples threads or other processes to concurrently open and write into the same 
+files. This is the responsability of the user to take car of that.
 
 ### Error status
 
-In case of incorrect or inconsistent input arguments, the routines always print an explicit message and the program aborts.
+In case of incorrect or inconsistent input arguments, the routines always print an 
+explicit message and the program aborts.
 
 In case something goes unexpectedly wrong internally (file can't be opened, or mapped, or closed...):
-- if the output `stat` argument is present the routines return an error code and the execution continues. The specific error can be inquired with the `fmmap_errmsg()` function.
--  if the output `stat` argument is not present, the routines print an explicit message and the program aborts.
+- if the output `stat` argument is present the routines return an error code and the 
+  execution continues. The specific error can be inquired with the `fmmap_errmsg()` function.
+- if the output `stat` argument is not present, the routines print an explicit message 
+  and the program aborts.
 
 ## Module
 
@@ -38,9 +43,11 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
 
 | type-bound procedure         | => module procedures |                                            |
 | ---------------------------- | -------------------- | ------------------------------------------ |
-| `x%create()`                 | `create()`           | creates a mapping                          |
+| `x%create()`                 | `create_elts()`      | creates a mapping                          |
+|                              | `create_bytes()`     |                                            |
 | `type(c_ptr) x%cptr()`       | `get_cptr()`         | returns the C pointer of the mapping       |
-| `integer(c_size_t) x%length` | `get_length()`       | returns the size of the mapping (in bytes) |
+| `integer(c_size_t) x%length` | `get_length_elts()`  | returns the size of the mapping            |
+|                              | `get_length_bytes()` |                                            |
 | `x%destroy()`                | `destroy()`          | destroys a mapping                         |
 
 ## public constants
@@ -52,11 +59,11 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
 
 ## procedures pointed by the type-bound procedures
 
-### `fmmap_t_create`
+### `fmmap_t_create_elts`
 
 ```Fortran
    !********************************************************************************************
-   subroutine fmmap_t_create(x,filestatus,filename,length,mold,private,stat)
+   subroutine fmmap_t_create_elts(x,filestatus,filename,length,mold,private,stat)
    !********************************************************************************************
    !! Opens a file and creates a "generic" mapping to a C pointer.
    !! The whole file is mapped.
@@ -86,8 +93,52 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
       !! This is actually the size of the file (or virtual file)
       !! ` length`  is expressed in bytes if `mold` is absent, or in elements of the `mold`
       !! type/kind if it is present
-   class(*),              intent(in),  optional :: mold(..)
-      !! if present, `length` is expressed in number of elements of the type/kind `mold`
+   class(*),              intent(in)            :: mold(..)
+      !! length` is expressed in number of elements of the type/kind `mold`
+   logical,               intent(in),  optional :: private
+      !! if .true., all the changes made to the mapped file are visible only by the current
+      !  mapping. All concurrent accesses to the file see the original data and not the
+      !! changes. Technically the changes are permanently cached in memory pages dedicated
+      !! to current mapping.
+      !! - .false. by default with FMMAP_NEW, FMMAP_OLD, and FMMAP_SCRATCH
+      !! - .true. by default with FMMAP_NOFILE
+   integer,               intent(out), optional :: stat
+      !! return status; is 0 if no error occurred
+```
+
+### `fmmap_t_create_bytes`
+
+```Fortran
+   !********************************************************************************************
+   subroutine fmmap_t_create_bytes(x,filestatus,filename,length,private,stat)
+   !********************************************************************************************
+   !! Opens a file and creates a "generic" mapping to a C pointer.
+   !! The whole file is mapped.
+   !********************************************************************************************
+   class(fmmap_t),        intent(out)           :: x
+      !! descriptor of the mapped file
+   integer,               intent(in)            :: filestatus
+      !! FMMAP_SCRATCH: mapping a temporary file
+      !! FMMAP_OLD    : mapping an already existing file
+      !! FMMAP_NEW    : mapping a newly created created file
+      !! FMMAP_NOFILE : no physical file
+   character(*),          intent(in)            :: filename
+      !! FMMAP_OLD or FMMAP_NEW:
+      !! - name of the file (with or without path)
+      !! FMMAP_SCRATCH:
+      !! - name of the path where the temporary file is created; if blank:
+      !!   - POSIX: the current directory ("./") is used
+      !!   - WIN32: the Windows temporary path is inquired and used
+      !! - a processor dependent unique filename is then generated and appended to the path
+      !! FMMAP_NOFILE:
+      !! - must be empty ("")
+   integer(c_size_t)                            :: length
+      !! FMMAP_SCRATCH, FMMAP_NEW, and FMMAP_NOFILE:
+      !!    input length of the mapping
+      !! FMMAP_OLD:
+      !!    output length of the mapping
+      !! This is actually the size of the file (or virtual file)
+      !! ` length`  is expressed in bytes
    logical,               intent(in),  optional :: private
       !! if .true., all the changes made to the mapped file are visible only by the current
       !  mapping. All concurrent accesses to the file see the original data and not the
@@ -112,20 +163,34 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
    type(c_ptr)                :: cptr
 ```
 
-### `fmmap_t_get_length`
+### `fmmap_t_get_length_elts`
 
 ```fortran
    !********************************************************************************************
-   function fmmap_t_get_length(x,mold) result(length)
+   function fmmap_t_get_length_elts(x,mold) result(length)
    !********************************************************************************************
    !! Returns the length of a mapped file
    !********************************************************************************************
    class(fmmap_t), intent(in)            :: x
       !! descriptor of the mapped file
-   class(*),       intent(in),  optional :: mold(..)
-      !! if present, the returned length is expressed in number of elements of the type/kind `mold`
+   class(*),       intent(in)            :: mold(..)
+      !! the returned length is expressed in number of elements of the type/kind `mold`
    integer(c_size_t)                     :: length
-      !! in bytes if `mold` is absent, or in elements of the type/kind of ` mold` if present
+      !! length in elements of the type/kind of ` mold`
+```
+
+### `fmmap_t_get_length_bytes`
+
+```fortran
+   !********************************************************************************************
+   function fmmap_t_get_length_bytes(x) result(length)
+   !********************************************************************************************
+   !! Returns the length in bytes of a mapped file
+   !********************************************************************************************
+   class(fmmap_t), intent(in)            :: x
+      !! descriptor of the mapped file
+   integer(c_size_t)                     :: length
+      !! length in bytes
 ```
 
 ### `fmmap_t_destroy`

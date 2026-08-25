@@ -29,7 +29,8 @@ filename = "./fun1.bin"
 print*
 print*, "Testing FMMAP_SCRATCH:"
 
-call x% create( FMMAP_SCRATCH, "", n1, mold=0d0 )
+length = n1 * fmmap_sizeof( pr )
+call x% create( FMMAP_SCRATCH, "", length )
 call c_f_pointer( x%cptr(), pr, [n1] )
 pr = [(real(i), i=1,n1)]
 if (size(pr) /= n1 .or. pr(n1) /= n1) then
@@ -74,7 +75,7 @@ print*, "PASSED"
 print*
 print*, "Testing FMMAP_OLD/multiple_maps"
 
-call x% create( FMMAP_OLD, filename, n, mold=0 )
+call x% create( FMMAP_OLD, filename, n, mold=pi1 )
 call c_f_pointer( x%cptr(), pi1, [n] )
    print*, "     1st mapping ok"
 call y% create( FMMAP_OLD, filename, length )
@@ -94,9 +95,8 @@ print*, "PASSED"
 print*
 print*, "Testing FMMAP_SCRATCH"
 
-length = n2 * fmmap_sizeof( pt )
 print*, "     "//"creating scratch mapping of", length," bytes"
-call x% create( FMMAP_SCRATCH, "", length)
+call x% create( FMMAP_SCRATCH, "", n2, mold=pt)
 call c_f_pointer( x%cptr(), pt, [n2] )
 print*, "     "//"filling the array"
 call random_number( pt(:)%a ); pt(n2)%a = 0.5
@@ -125,7 +125,7 @@ if (pi1(n) /= -1) then
 end if
 pi1(n/2) = 42
 call x% destroy()
-call x% create( FMMAP_OLD, filename, n, mold=0, private=.true.)
+call x% create( FMMAP_OLD, filename, n, mold=pi1, private=.true.)
 call c_f_pointer( x%cptr(), pi1, [n] )
 if (pi1(n/2) /= 1) then
    print*, "FAILED 2", pi1(n/2)
@@ -133,7 +133,7 @@ if (pi1(n/2) /= 1) then
 end if
 pi1(n/2) = 42
 call x% destroy( writeback=.true. )
-call x% create( FMMAP_OLD, filename, n, mold=0 )
+call x% create( FMMAP_OLD, filename, n, mold=pi1 )
 call c_f_pointer( x%cptr(), pi1, [n] )
 if (pi1(n/2) /= 42) then
    print*, "FAILED 3"
@@ -147,7 +147,7 @@ print*, "PASSED"
 print*
 print*, "Testing FMMAP_NOFILE"
 
-call x% create( FMMAP_NOFILE, "", n2, mold=0d0 )
+call x% create( FMMAP_NOFILE, "", n2, mold=pr )
 call c_f_pointer( x%cptr(), pr, [n2] )
 pr(:) = 42d0
 allocate( pi1(n2), source = 0 )
