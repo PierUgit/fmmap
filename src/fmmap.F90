@@ -44,10 +44,10 @@ implicit none
       private
       procedure         :: create_elts  => fmmap_t_create
       procedure         :: create_bytes => fmmap_t_create_bytes
-      generic,   public :: create  => create_elts, create_bytes
-      procedure, public :: cptr    => fmmap_t_get_cptr
       procedure         :: length_elts  => fmmap_t_get_length
       procedure         :: length_bytes => fmmap_t_get_length_bytes
+      generic,   public :: create  => create_elts, create_bytes
+      procedure, public :: cptr    => fmmap_t_get_cptr
       generic,   public :: length  => length_elts, length_bytes
       procedure, public :: destroy => fmmap_t_destroy
       final             ::            fmmap_t_final
@@ -82,111 +82,49 @@ contains
 
    !********************************************************************************************
    !> @brief
-   !! Returns the number of bytes occupied in memory by a scalar object of any type
-   !********************************************************************************************
-   function fmmap_sizeof(object) result(nbytes)
-   !********************************************************************************************
-   class(*), intent(in) :: object(..)   !< object of any type (unlimited polymorphic)
-   integer(c_size_t) :: nbytes          !< number of bytes of a scalar of object type
-   !********************************************************************************************
-   nbytes = storage_size( object )
-   if (modulo(nbytes,int(bitsperbyte,kind=c_size_t)) /= 0) then
-      error stop "*** fmmap_sizeof(): the storage size of the object is not a multiple of the number of bits per byte"
-   end if
-   nbytes = nbytes / bitsperbyte
-   end function fmmap_sizeof
-   
-   
-   !********************************************************************************************
-   function fmmap_e2b(nelems,ss) result(nbytes)
-   !********************************************************************************************
-   !! DEPRECATED : USE fmmap_sizeof() INSTEAD
-   !!
-   !! converts a number of elements to a number of bytes
-   !! `ss` is typically obtained with the intrinsic function `ss = storage_size(var)`,
-   !!  where `var` is any variable of the manipulated type+kind
-   !********************************************************************************************
-   integer(c_size_t), intent(in) :: nelems   !! number of elements
-   integer,           intent(in) :: ss       !! storage size (in bits) of 1 element
-   integer(c_size_t)             :: nbytes   !! number of bytes
-   !********************************************************************************************
-   if (modulo(ss,bitsperbyte) /= 0) then
-      error stop "*** fmmap_e2b(): the storage size is not a multiple of the number of bits per byte"
-   end if
-   nbytes = nelems * (ss / bitsperbyte)
-   end function fmmap_e2b
-
-
-   !********************************************************************************************
-   function fmmap_b2e(nbytes,ss) result(nelems)
-   !********************************************************************************************
-   !! DEPRECATED : USE fmmap_sizeof() INSTEAD
-   !!
-   !! converts a number of bytes to a number of elements
-   !! `ss` is typically obtained with the intrinsic function `ss = storage_size(var)`,
-   !!  where `var` is any variable of the manipulated type+kind
-   !********************************************************************************************
-   integer(c_size_t), intent(in) :: nbytes   !! number of nbytes
-   integer,           intent(in) :: ss       !! storage size (in bits) of 1 element
-   integer(c_size_t)             :: nelems   !! number of elements
-
-   integer(c_size_t) :: bytesperelem
-   !********************************************************************************************
-   if (modulo(ss,bitsperbyte) /= 0) then
-      error stop "*** fmmap_b2e(): the storage size is not a multiple of the number of bits per byte"
-   end if
-   bytesperelem = ss / bitsperbyte
-   nelems = nbytes / bytesperelem
-   if (nelems * bytesperelem /= nbytes) then
-      error stop "*** fmmap_b2e(): the number of bytes does not form an integer number of elements"
-   end if
-   end function fmmap_b2e
-
-
+   !! Opens a file and creates a "generic" mapping to a C pointer.
+   !! The whole file is mapped.
+   !! 
+   !! This is a type-bound procedure, which means that the invocation is actually:
+   !! ```
+   !! call x%create( <all arguments but x> )
+   !! ```
    !********************************************************************************************
    subroutine fmmap_t_create(x,filestatus,filename,length,mold,private,stat)
    !********************************************************************************************
-   !! Opens a file and creates a "generic" mapping to a C pointer.
-   !! The whole file is mapped.
-   !********************************************************************************************
    class(fmmap_t),        intent(out)           :: x
-      !! descriptor of the mapped file
+      !< descriptor of the mapped file
    integer,               intent(in)            :: filestatus
-      !! FMMAP_SCRATCH: mapping a temporary file
-      !! FMMAP_OLD    : mapping an already existing file
-      !! FMMAP_NEW    : mapping a newly created created file
+      !< FMMAP_SCRATCH: mapping a temporary file  
+      !! FMMAP_OLD    : mapping an already existing file  
+      !! FMMAP_NEW    : mapping a newly created created file  
       !! FMMAP_NOFILE : no physical file
    character(*),          intent(in)            :: filename
-      !! FMMAP_OLD or FMMAP_NEW:
-      !! - name of the file (with or without path)
-      !! FMMAP_SCRATCH:
-      !! - name of the path where the temporary file is created; if blank:
+      !< FMMAP_OLD or FMMAP_NEW: name of the file (with or without path)  
+      !! FMMAP_SCRATCH: name of the path where the temporary file is created
+      !! - (a processor dependent unique filename is generated and appended to the path);
+      !! - if blank:
       !!   - POSIX: the current directory ("./") is used
       !!   - WIN32: the Windows temporary path is inquired and used
-      !! - a processor dependent unique filename is then generated and appended to the path
-      !! FMMAP_NOFILE:
-      !! - must be empty ("")
+      !! FMMAP_NOFILE:  must be empty ("")
    integer(c_size_t)                            :: length
-      !! FMMAP_SCRATCH, FMMAP_NEW, and FMMAP_NOFILE:
-      !!    input length of the mapping
-      !! FMMAP_OLD:
-      !!    output length of the mapping
-      !! This is actually the size of the file (or virtual file)
-      !! ` length`  is expressed in elements of the `mold` type/kind
+      !< Size of the file (or virtual file)  
+      !! FMMAP_SCRATCH, FMMAP_NEW, and FMMAP_NOFILE: input length of the mapping  
+      !! FMMAP_OLD: output length of the mapping
    class(*),              intent(in)            :: mold(..)
-      !! length` is expressed in number of elements of the type/kind `mold`
+      !< length` is expressed in number of elements of the type/kind `mold`
    logical,               intent(in),  optional :: private
-      !! if .true., all the changes made to the mapped file are visible only by the current
-      !  mapping. All concurrent accesses to the file see the original data and not the
+      !< if .true., all the changes made to the mapped file are visible only by the current
+      !! mapping. All concurrent accesses to the file see the original data and not the
       !! changes. Technically the changes are permanently cached in memory pages dedicated
       !! to current mapping.
-      !! - .false. by default with FMMAP_NEW, FMMAP_OLD, and FMMAP_SCRATCH
-      !! - .true. by default with FMMAP_NOFILE
+      !! - is .false. by default with FMMAP_NEW, FMMAP_OLD, and FMMAP_SCRATCH
+      !! - is .true. by default with FMMAP_NOFILE
    integer,               intent(out), optional :: stat
-      !! return status; is 0 if no error occurred
+      !< return status; is 0 if no error occurred
 
    integer(c_size_t) :: length___
-   character(*), parameter :: msgpre = "*** fmmap_create_with_elts: "
+   character(*), parameter :: msgpre = "*** fmmap_create: "
    !********************************************************************************************
 
    if (file_storage_size /= bitsperbyte) then
@@ -204,46 +142,288 @@ contains
 
 
    !********************************************************************************************
-   subroutine fmmap_t_create_bytes(x,filestatus,filename,length,private,stat)
+   !> @brief
+   !! Returns the C pointer of a mapped file
+   !!
+   !! This is a type-bound procedure, which means that the invocation is actually:
+   !! ```
+   !! mycptr = x%get_cptr()
+   !! ```
    !********************************************************************************************
+   function fmmap_t_get_cptr(x) result(cptr)
+   !********************************************************************************************
+   class(fmmap_t), intent(in) :: x
+      !< descriptor of the mapped file
+   type(c_ptr)                :: cptr
+      !< the output C pointer
+   !********************************************************************************************
+   cptr = c_null_ptr
+   if (allocated(x% cx)) cptr = x% cx % ptr
+   end function fmmap_t_get_cptr
+
+
+   !********************************************************************************************
+   !> @brief
+   !! Returns the length of a mapped file
+   !!
+   !! This is a type-bound procedure, which means that the invocation is actually:
+   !! ```
+   !! mylength = x%get_length( <all arguments but x> )
+   !! ```
+   !********************************************************************************************
+   function fmmap_t_get_length(x,mold) result(length)
+   !********************************************************************************************
+   class(fmmap_t), intent(in)            :: x
+      !< descriptor of the mapped file
+   class(*),       intent(in)            :: mold(..)
+      !< the returned length is expressed in number of elements of the type/kind `mold`
+   integer(c_size_t)                     :: length
+      !< length in elements of the type/kind of ` mold`
+   
+   character(*), parameter :: msgpre = "*** fmmap_t_get_length_elts: "
+   !********************************************************************************************
+   if (modulo(storage_size(mold),bitsperbyte) /= 0) then
+      error stop msgpre//"the storage size is not a multiple of the number of bits per byte"
+   end if
+   
+   length = 0
+   if (allocated(x% cx)) length = x% cx % n * storage_size(mold) / bitsperbyte
+   end function fmmap_t_get_length
+
+   
+   !********************************************************************************************
+   !> @brief
+   !! Destroys a generic mapping
+   !!
+   !! This is a type-bound procedure, which means that the invocation is actually:
+   !! ```
+   !! call x%destroy()
+   !! ```
+   !********************************************************************************************
+   subroutine fmmap_t_destroy(x,writeback,stat)
+   !********************************************************************************************
+   class(fmmap_t), intent(inout)          :: x
+      !< descriptor of the mapped file
+   logical,        intent(in),   optional :: writeback
+      !< If .true., the changes in memory in the private mode are written back to the file
+      !! before unmapping.
+      !! - is .false. by default with FFMAP_SCRATCH, FMMAP_OLD, and FFMAP_NOFILE
+      !! - is .true. by default with FMMAP_NEW
+   integer,       intent(out),   optional :: stat
+      !< return status, is 0 if no error occurred
+
+   integer :: stat___
+   logical(c_bool) :: wb
+   character(*), parameter :: msgpre = "*** fmmap_destroy: "
+   character(:), allocatable :: msg
+   !********************************************************************************************
+
+   stat___ = 0
+
+   BODY: BLOCK
+   ASSOCIATE( cx => x% cx )
+
+   if (.not.allocated(x% cx)) then
+      stat___ = 10
+      exit BODY
+   end if
+
+   wb = (cx% filestatus == FMMAP_NEW .and. cx% private)
+   if (present(writeback)) wb = writeback
+   if (wb) then
+      if (.not. cx% private) then
+         error stop msgpre//"writeback must be .false. if private was .false."
+      end if
+      if (cx% filestatus == FMMAP_SCRATCH .or. cx% filestatus == FMMAP_NOFILE) then
+         error stop msgpre//"writeback must be .false. with FMMAP_SCRATCH or FMMAP_NOFILE"
+      end if
+   else
+      if (cx% filestatus == FMMAP_NEW .and. cx% private) then
+         error stop msgpre//"writeback must be .true. with FMMAP_NEW if private was true"
+      end if
+   end if
+
+   stat___ = c_mmap_destroy( cx, wb )
+   if (stat___ /= 0) exit BODY
+   cx% ptr = c_null_ptr
+
+   END ASSOCIATE
+   END BLOCK BODY
+
+
+   if (allocated(x% cx)) deallocate( x% cx )
+   if (present(stat)) then
+      stat = stat___
+   else if (stat___ > 0) then
+      msg = msgpre//fmmap_errmsg(stat___)
+      error stop msg
+   end if
+
+   end subroutine fmmap_t_destroy
+
+
+   !********************************************************************************************
+   !> @brief
+   !! Returns the error messages corresponding to an error code
+   !********************************************************************************************
+   function fmmap_errmsg(stat) result(msg)
+   !********************************************************************************************
+   integer, intent(in) :: stat            !< error code
+   character(len=:), allocatable :: msg   !< corresponding error message
+   !********************************************************************************************
+
+   select case (stat)
+   case (  0); msg = "No error!!!"
+   case (  1); msg = "The Fortran file storage unit is not a byte; fmmap module not usable"
+   case (  2); msg = "Unable to inquire the file size (F)"
+   case (  3); msg = "Unable to create the NEW file (F)"
+   case ( 10); msg = "Attempt to free a non associated C pointer (F)"
+   case (101); msg = "Unable to create the SCRATCH file (C)"
+   case (105); msg = "Unable to reopen the SCRATCH file (C)"
+   case (111); msg = "Unable to open the file (C)"
+   case (121); msg = "Unable to map the file (C)"
+   case (122); msg = "Unable to mapview the file (C)"
+   case (131); msg = "Unable to close the file (C)"
+   case (201); msg = "Unable to create a new mapping for writeback (C)"
+   case (202); msg = "Unable to destroy the new mapping for writeback (C)"
+   case (211); msg = "Unable to flush/sync the mapping (C)"
+   case (221); msg = "Unable to unmap (C)"
+   case (222); msg = "Unable to unmapview (C)"
+
+   case default; msg = "Invalid error code!!!"
+   end select
+
+   end function fmmap_errmsg
+
+   
+   !********************************************************************************************
+   !> @brief
+   !! Returns the number of bytes occupied in memory by a scalar object of any type
+   !!
+   !! Can be useful for advanced usages of the library, not for a standard usage 
+   !********************************************************************************************
+   function fmmap_sizeof(object) result(nbytes)
+   !********************************************************************************************
+   class(*), intent(in) :: object(..)   !< object of any type (unlimited polymorphic)
+   integer(c_size_t) :: nbytes          !< number of bytes of a scalar of object type
+   !********************************************************************************************
+   nbytes = storage_size( object )
+   if (modulo(nbytes,int(bitsperbyte,kind=c_size_t)) /= 0) then
+      error stop "*** fmmap_sizeof(): the storage size of the object is not a multiple of the number of bits per byte"
+   end if
+   nbytes = nbytes / bitsperbyte
+   end function fmmap_sizeof
+   
+   
+   !********************************************************************************************
+   impure elemental subroutine fmmap_t_final(x)
+   !********************************************************************************************
+   !! Destroys a generic mapping
+   !********************************************************************************************
+   type(fmmap_t), intent(inout)          :: x
+      !< descriptor of the mapped file
+
+   integer :: stat
+   character(*), parameter :: msgpre = "*** fmmap_final: "
+   character(:), allocatable :: msg
+   !********************************************************************************************
+
+   if (allocated(x% cx)) then
+      call fmmap_t_destroy(x,stat=stat)
+      msg = msgpre//fmmap_errmsg(stat)
+      if (stat > 0) error stop msg
+   end if
+
+   end subroutine fmmap_t_final
+
+
+   !********************************************************************************************
+   function upcase(str)
+   !********************************************************************************************
+   character(*), intent(in) :: str
+   character(len(str)) :: upcase
+
+   character(*), parameter :: LC = "abcdefghijklmnopqrstuvwxz"
+   character(*), parameter :: UC = "ABCDEFGHIJKLMNOPQRSTUVWXZ"
+   integer :: i, j
+   !********************************************************************************************
+   do i = 1, len(str)
+      j = index( LC, str(i:i) )
+      upcase(i:i) = merge( UC(j:j), str(i:i), j > 0)
+   end do
+   end function upcase
+
+
+   !********************************************************************************************
+   logical pure function strcomp(s,t)
+   !********************************************************************************************
+   character(*), intent(in) :: s, t
+   !********************************************************************************************
+   strcomp = (s == t) .and. (len(s) == len(t))
+   end function strcomp
+
+
+   !********************************************************************************************
+   !> @brief
+   !! DEPRECATED : USE fmmap_sizeof() INSTEAD
+   !!
+   !! converts a number of elements to a number of bytes
+   !! `ss` is typically obtained with the intrinsic function `ss = storage_size(var)`,
+   !!  where `var` is any variable of the manipulated type+kind
+   !********************************************************************************************
+   function fmmap_e2b(nelems,ss) result(nbytes)
+   !********************************************************************************************
+   integer(c_size_t), intent(in) :: nelems   !< number of elements
+   integer,           intent(in) :: ss       !< storage size (in bits) of 1 element
+   integer(c_size_t)             :: nbytes   !< number of bytes
+   !********************************************************************************************
+   if (modulo(ss,bitsperbyte) /= 0) then
+      error stop "*** fmmap_e2b(): the storage size is not a multiple of the number of bits per byte"
+   end if
+   nbytes = nelems * (ss / bitsperbyte)
+   end function fmmap_e2b
+
+
+   !********************************************************************************************
+   !> @brief
+   !! DEPRECATED : USE fmmap_sizeof() INSTEAD
+   !!
+   !! converts a number of bytes to a number of elements
+   !! `ss` is typically obtained with the intrinsic function `ss = storage_size(var)`,
+   !!  where `var` is any variable of the manipulated type+kind
+   !********************************************************************************************
+   function fmmap_b2e(nbytes,ss) result(nelems)
+   !********************************************************************************************
+   integer(c_size_t), intent(in) :: nbytes   !< number of nbytes
+   integer,           intent(in) :: ss       !< storage size (in bits) of 1 element
+   integer(c_size_t)             :: nelems   !< number of elements
+
+   integer(c_size_t) :: bytesperelem
+   !********************************************************************************************
+   if (modulo(ss,bitsperbyte) /= 0) then
+      error stop "*** fmmap_b2e(): the storage size is not a multiple of the number of bits per byte"
+   end if
+   bytesperelem = ss / bitsperbyte
+   nelems = nbytes / bytesperelem
+   if (nelems * bytesperelem /= nbytes) then
+      error stop "*** fmmap_b2e(): the number of bytes does not form an integer number of elements"
+   end if
+   end function fmmap_b2e
+
+   !********************************************************************************************
+   !> @brief
    !! DEPRECATED : always use fmmap_t_create()
    !!
-   !! Opens a file and creates a "generic" mapping to a C pointer.
-   !! The whole file is mapped.
+   !! Same as fmmap_t_create(), with `mold` occupying 1 byte  
+   !********************************************************************************************
+   subroutine fmmap_t_create_bytes(x,filestatus,filename,length,private,stat)
    !********************************************************************************************
    class(fmmap_t),        intent(out)           :: x
-      !! descriptor of the mapped file
    integer,               intent(in)            :: filestatus
-      !! FMMAP_SCRATCH: mapping a temporary file
-      !! FMMAP_OLD    : mapping an already existing file
-      !! FMMAP_NEW    : mapping a newly created created file
-      !! FMMAP_NOFILE : no physical file
    character(*),          intent(in)            :: filename
-      !! FMMAP_OLD or FMMAP_NEW:
-      !! - name of the file (with or without path)
-      !! FMMAP_SCRATCH:
-      !! - name of the path where the temporary file is created; if blank:
-      !!   - POSIX: the current directory ("./") is used
-      !!   - WIN32: the Windows temporary path is inquired and used
-      !! - a processor dependent unique filename is then generated and appended to the path
-      !! FMMAP_NOFILE:
-      !! - must be empty ("")
    integer(c_size_t)                            :: length
-      !! FMMAP_SCRATCH, FMMAP_NEW, and FMMAP_NOFILE:
-      !!    input length of the mapping
-      !! FMMAP_OLD:
-      !!    output length of the mapping
-      !! This is actually the size of the file (or virtual file)
-      !! ` length`  is expressed in bytes
    logical,               intent(in),  optional :: private
-      !! if .true., all the changes made to the mapped file are visible only by the current
-      !  mapping. All concurrent accesses to the file see the original data and not the
-      !! changes. Technically the changes are permanently cached in memory pages dedicated
-      !! to current mapping.
-      !! - .false. by default with FMMAP_NEW, FMMAP_OLD, and FMMAP_SCRATCH
-      !! - .true. by default with FMMAP_NOFILE
    integer,               intent(out), optional :: stat
-      !! return status; is 0 if no error occurred
 
    integer :: ss, lu, stat___
    character(kind=c_char,len=:), allocatable :: c_filename
@@ -341,203 +521,19 @@ contains
 
 
    !********************************************************************************************
-   function fmmap_t_get_cptr(x) result(cptr)
-   !********************************************************************************************
-   !! Returns the C pointer of a mapped file
-   !********************************************************************************************
-   class(fmmap_t), intent(in) :: x
-      !! descriptor of the mapped file
-   type(c_ptr)                :: cptr
-   !********************************************************************************************
-   cptr = c_null_ptr
-   if (allocated(x% cx)) cptr = x% cx % ptr
-   end function fmmap_t_get_cptr
-
-
-   !********************************************************************************************
-   function fmmap_t_get_length(x,mold) result(length)
-   !********************************************************************************************
-   !! Returns the length of a mapped file
-   !********************************************************************************************
-   class(fmmap_t), intent(in)            :: x
-      !! descriptor of the mapped file
-   class(*),       intent(in)            :: mold(..)
-      !! the returned length is expressed in number of elements of the type/kind `mold`
-   integer(c_size_t)                     :: length
-      !! length in elements of the type/kind of ` mold`
-   
-   character(*), parameter :: msgpre = "*** fmmap_t_get_length_elts: "
-   !********************************************************************************************
-   if (modulo(storage_size(mold),bitsperbyte) /= 0) then
-      error stop msgpre//"the storage size is not a multiple of the number of bits per byte"
-   end if
-   
-   length = 0
-   if (allocated(x% cx)) length = x% cx % n * storage_size(mold) / bitsperbyte
-   end function fmmap_t_get_length
-
-
+   !> @brief
+   !! DEPRECATED : always use fmmap_t_get_length()
+   !!
+   !! same as fmmap_t_get_length(), with `mold` occupying 1 byte  
    !********************************************************************************************
    function fmmap_t_get_length_bytes(x) result(length)
    !********************************************************************************************
-   !! DEPRECATED : always use fmmap_t_get_length()
-   !!
-   !! Returns the length in bytes of a mapped file
-   !********************************************************************************************
    class(fmmap_t), intent(in)            :: x
-      !! descriptor of the mapped file
    integer(c_size_t)                     :: length
-      !! length in bytes
    !********************************************************************************************
    length = 0
    if (allocated(x% cx)) length = x% cx % n
    end function fmmap_t_get_length_bytes
-
-
-   !********************************************************************************************
-   subroutine fmmap_t_destroy(x,writeback,stat)
-   !********************************************************************************************
-   !! Destroys a generic mapping
-   !********************************************************************************************
-   class(fmmap_t), intent(inout)          :: x
-      !! descriptor of the mapped file
-   logical,        intent(in),   optional :: writeback
-      !! If .true., the changes in memory in the private mode are written back to the file
-      !! before unmapping.
-      !! .false. by default with FFMAP_SCRATCH, FMMAP_OLD, and FFMAP_NOFILE
-      !! .true. by default with FMMAP_NEW
-   integer,       intent(out),   optional :: stat
-      !! return status, is 0 if no error occurred
-
-   integer :: stat___
-   logical(c_bool) :: wb
-   character(*), parameter :: msgpre = "*** fmmap_destroy: "
-   character(:), allocatable :: msg
-   !********************************************************************************************
-
-   stat___ = 0
-
-   BODY: BLOCK
-   ASSOCIATE( cx => x% cx )
-
-   if (.not.allocated(x% cx)) then
-      stat___ = 10
-      exit BODY
-   end if
-
-   wb = (cx% filestatus == FMMAP_NEW .and. cx% private)
-   if (present(writeback)) wb = writeback
-   if (wb) then
-      if (.not. cx% private) then
-         error stop msgpre//"writeback must be .false. if private was .false."
-      end if
-      if (cx% filestatus == FMMAP_SCRATCH .or. cx% filestatus == FMMAP_NOFILE) then
-         error stop msgpre//"writeback must be .false. with FMMAP_SCRATCH or FMMAP_NOFILE"
-      end if
-   else
-      if (cx% filestatus == FMMAP_NEW .and. cx% private) then
-         error stop msgpre//"writeback must be .true. with FMMAP_NEW if private was true"
-      end if
-   end if
-
-   stat___ = c_mmap_destroy( cx, wb )
-   if (stat___ /= 0) exit BODY
-   cx% ptr = c_null_ptr
-
-   END ASSOCIATE
-   END BLOCK BODY
-
-
-   if (allocated(x% cx)) deallocate( x% cx )
-   if (present(stat)) then
-      stat = stat___
-   else if (stat___ > 0) then
-      msg = msgpre//fmmap_errmsg(stat___)
-      error stop msg
-   end if
-
-   end subroutine fmmap_t_destroy
-
-
-   !********************************************************************************************
-   impure elemental subroutine fmmap_t_final(x)
-   !********************************************************************************************
-   !! Destroys a generic mapping
-   !********************************************************************************************
-   type(fmmap_t), intent(inout)          :: x
-      !! descriptor of the mapped file
-
-   integer :: stat
-   character(*), parameter :: msgpre = "*** fmmap_final: "
-   character(:), allocatable :: msg
-   !********************************************************************************************
-
-   if (allocated(x% cx)) then
-      call fmmap_t_destroy(x,stat=stat)
-      msg = msgpre//fmmap_errmsg(stat)
-      if (stat > 0) error stop msg
-   end if
-
-   end subroutine fmmap_t_final
-
-
-   !********************************************************************************************
-   function upcase(str)
-   !********************************************************************************************
-   character(*), intent(in) :: str
-   character(len(str)) :: upcase
-
-   character(*), parameter :: LC = "abcdefghijklmnopqrstuvwxz"
-   character(*), parameter :: UC = "ABCDEFGHIJKLMNOPQRSTUVWXZ"
-   integer :: i, j
-   !********************************************************************************************
-   do i = 1, len(str)
-      j = index( LC, str(i:i) )
-      upcase(i:i) = merge( UC(j:j), str(i:i), j > 0)
-   end do
-   end function upcase
-
-
-   !********************************************************************************************
-   logical pure function strcomp(s,t)
-   !********************************************************************************************
-   character(*), intent(in) :: s, t
-   !********************************************************************************************
-   strcomp = (s == t) .and. (len(s) == len(t))
-   end function strcomp
-
-
-   !********************************************************************************************
-   function fmmap_errmsg(stat) result(msg)
-   !********************************************************************************************
-   !! Returns the error messages corresponding to an error code
-   !********************************************************************************************
-   integer, intent(in) :: stat
-   character(len=:), allocatable :: msg
-   !********************************************************************************************
-
-   select case (stat)
-   case (  0); msg = "No error!!!"
-   case (  1); msg = "The Fortran file storage unit is not a byte; fmmap module not usable"
-   case (  2); msg = "Unable to inquire the file size (F)"
-   case (  3); msg = "Unable to create the NEW file (F)"
-   case ( 10); msg = "Attempt to free a non associated C pointer (F)"
-   case (101); msg = "Unable to create the SCRATCH file (C)"
-   case (105); msg = "Unable to reopen the SCRATCH file (C)"
-   case (111); msg = "Unable to open the file (C)"
-   case (121); msg = "Unable to map the file (C)"
-   case (122); msg = "Unable to mapview the file (C)"
-   case (131); msg = "Unable to close the file (C)"
-   case (201); msg = "Unable to create a new mapping for writeback (C)"
-   case (202); msg = "Unable to destroy the new mapping for writeback (C)"
-   case (211); msg = "Unable to flush/sync the mapping (C)"
-   case (221); msg = "Unable to unmap (C)"
-   case (222); msg = "Unable to unmapview (C)"
-
-   case default; msg = "Invalid error code!!!"
-   end select
-
-   end function fmmap_errmsg
 
 
 end module fmmap
