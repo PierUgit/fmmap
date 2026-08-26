@@ -41,14 +41,12 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
 
 `type(fmmap_t) :: x` 
 
-| type-bound procedure         | => module procedures |                                            |
-| ---------------------------- | -------------------- | ------------------------------------------ |
-| `x%create()`                 | `create_elts()`      | creates a mapping                          |
-|                              | `create_bytes()`     |                                            |
-| `type(c_ptr) x%cptr()`       | `get_cptr()`         | returns the C pointer of the mapping       |
-| `integer(c_size_t) x%length` | `get_length_elts()`  | returns the size of the mapping            |
-|                              | `get_length_bytes()` |                                            |
-| `x%destroy()`                | `destroy()`          | destroys a mapping                         |
+| type-bound procedure           | => module procedures   |                                            |
+| ------------------------------ | ---------------------- | ------------------------------------------ |
+| `x%create()`                   | `fmmap_t_create()`     | creates a mapping                          |
+| `type(c_ptr) x%cptr()`         | `fmmap_t_get_cptr()`   | returns the C pointer of the mapping       |
+| `integer(c_size_t) x%length()` | `fmmap_t_get_length()` | returns the size of the mapping            |
+| `x%destroy()`                  | `fmmap_t_destroy()`    | destroys a mapping                         |
 
 ## public constants
 
@@ -63,7 +61,7 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
 
 ```Fortran
    !********************************************************************************************
-   subroutine fmmap_t_create_elts(x,filestatus,filename,length,mold,private,stat)
+   subroutine fmmap_t_create(x,filestatus,filename,length,mold,private,stat)
    !********************************************************************************************
    !! Opens a file and creates a "generic" mapping to a C pointer.
    !! The whole file is mapped.
@@ -106,12 +104,62 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
       !! return status; is 0 if no error occurred
 ```
 
-### `fmmap_t_create_bytes`
+### `fmmap_t_get_cptr`
+
+```Fortran
+   !********************************************************************************************
+   function fmmap_t_get_cptr(x) result(cptr)
+   !********************************************************************************************
+   !! Returns the C pointer of a mapped file
+   !********************************************************************************************
+   class(fmmap_t), intent(in) :: x
+      !! descriptor of the mapped file
+   type(c_ptr)                :: cptr
+```
+
+### `fmmap_t_get_length`
+
+```fortran
+   !********************************************************************************************
+   function fmmap_t_get_length(x,mold) result(length)
+   !********************************************************************************************
+   !! Returns the length of a mapped file
+   !********************************************************************************************
+   class(fmmap_t), intent(in)            :: x
+      !! descriptor of the mapped file
+   class(*),       intent(in)            :: mold(..)
+      !! the returned length is expressed in number of elements of the type/kind `mold`
+   integer(c_size_t)                     :: length
+      !! length in elements of the type/kind of ` mold`
+```
+
+### `fmmap_t_destroy`
+
+```Fortran
+   !********************************************************************************************
+   subroutine fmmap_t_destroy(x,writeback,stat)
+   !********************************************************************************************
+   !! Destroys a generic mapping
+   !********************************************************************************************
+   class(fmmap_t), intent(inout)          :: x
+      !! descriptor of the mapped file
+   logical,        intent(in),   optional :: writeback
+      !! If .true., the changes in memory in the private mode are written back to the file
+      !! before unmapping.
+      !! .false. by default with FFMAP_SCRATCH, FMMAP_OLD, and FFMAP_NOFILE
+      !! .true. by default with FMMAP_NEW
+   integer,       intent(out),   optional :: stat
+      !! return status, is 0 if no error occurred
+```
+
+### `fmmap_t_create_bytes` - DEPRECATED
 
 ```Fortran
    !********************************************************************************************
    subroutine fmmap_t_create_bytes(x,filestatus,filename,length,private,stat)
    !********************************************************************************************
+   !! DEPRECATED - always use fmmap_t_create()
+   !!
    !! Opens a file and creates a "generic" mapping to a C pointer.
    !! The whole file is mapped.
    !********************************************************************************************
@@ -150,66 +198,20 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
       !! return status; is 0 if no error occurred
 ```
 
-### `fmmap_t_get_cptr`
-
-```Fortran
-   !********************************************************************************************
-   function fmmap_t_get_cptr(x) result(cptr)
-   !********************************************************************************************
-   !! Returns the C pointer of a mapped file
-   !********************************************************************************************
-   class(fmmap_t), intent(in) :: x
-      !! descriptor of the mapped file
-   type(c_ptr)                :: cptr
-```
-
-### `fmmap_t_get_length_elts`
-
-```fortran
-   !********************************************************************************************
-   function fmmap_t_get_length_elts(x,mold) result(length)
-   !********************************************************************************************
-   !! Returns the length of a mapped file
-   !********************************************************************************************
-   class(fmmap_t), intent(in)            :: x
-      !! descriptor of the mapped file
-   class(*),       intent(in)            :: mold(..)
-      !! the returned length is expressed in number of elements of the type/kind `mold`
-   integer(c_size_t)                     :: length
-      !! length in elements of the type/kind of ` mold`
-```
-
-### `fmmap_t_get_length_bytes`
+### `fmmap_t_get_length_bytes` - DEPRECATED
 
 ```fortran
    !********************************************************************************************
    function fmmap_t_get_length_bytes(x) result(length)
    !********************************************************************************************
+   !! DEPRECATED - always use fmmap_t_get_length()
+   !!
    !! Returns the length in bytes of a mapped file
    !********************************************************************************************
    class(fmmap_t), intent(in)            :: x
       !! descriptor of the mapped file
    integer(c_size_t)                     :: length
       !! length in bytes
-```
-
-### `fmmap_t_destroy`
-
-```Fortran
-   !********************************************************************************************
-   subroutine fmmap_t_destroy(x,writeback,stat)
-   !********************************************************************************************
-   !! Destroys a generic mapping
-   !********************************************************************************************
-   class(fmmap_t), intent(inout)          :: x
-      !! descriptor of the mapped file
-   logical,        intent(in),   optional :: writeback
-      !! If .true., the changes in memory in the private mode are written back to the file
-      !! before unmapping.
-      !! .false. by default with FFMAP_SCRATCH, FMMAP_OLD, and FFMAP_NOFILE
-      !! .true. by default with FMMAP_NEW
-   integer,       intent(out),   optional :: stat
-      !! return status, is 0 if no error occurred
 ```
 
 ## Public utility procedures
@@ -221,6 +223,8 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
    function fmmap_sizeof(object) result(nbytes)
    !********************************************************************************************
    !! Returns the number of bytes occupied in memory by a scalar object of any type
+   !!
+   !! No needed for standard usage of the library, can be useful for advanced usage
    !********************************************************************************************
    class(*), intent(in) :: object(..)   !< object of any type (unlimited polymorphic)
    integer(c_size_t) :: nbytes          !< number of bytes of a scalar of object type

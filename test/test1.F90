@@ -29,8 +29,7 @@ filename = "./fun1.bin"
 print*
 print*, "Testing FMMAP_SCRATCH:"
 
-length = n1 * fmmap_sizeof( pr )
-call x% create( FMMAP_SCRATCH, "", length )
+call x% create( FMMAP_SCRATCH, "", n1, mold=pr )
 call c_f_pointer( x%cptr(), pr, [n1] )
 pr = [(real(i), i=1,n1)]
 if (size(pr) /= n1 .or. pr(n1) /= n1) then
@@ -61,7 +60,7 @@ print*, "PASSED"
 print*
 print*, "Testing FMMAP_OLD"
 
-call x% create( FMMAP_OLD, filename, length )
+call x% create( FMMAP_OLD, filename, length, mold=pi3 )
 call c_f_pointer( x%cptr(), pi3, [n1,n1/2,2_cst] )
 if (pi3(1,1,1) /= 1 .or. pi3(n1,n1/2,2) /= -1) then
    print*, "FAILED"
@@ -78,7 +77,7 @@ print*, "Testing FMMAP_OLD/multiple_maps"
 call x% create( FMMAP_OLD, filename, n, mold=pi1 )
 call c_f_pointer( x%cptr(), pi1, [n] )
    print*, "     1st mapping ok"
-call y% create( FMMAP_OLD, filename, length )
+call y% create( FMMAP_OLD, filename, n, mold=0 )
 call c_f_pointer( y%cptr(), pi1b, [n] )
    print*, "     2nd mapping ok"
 pi1(10) = -999

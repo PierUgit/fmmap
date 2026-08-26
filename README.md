@@ -4,38 +4,38 @@ See also the ["detailed" documentation](doc/index.md)
 
 ## Introduction
 
-These routines provide *some* of the features of the posix or Windows memory mapped files under a simple and unique Fortran interface.
+These routines provide *some* of the features of the posix or Windows memory mapped files under 
+a simple and unique Fortran interface.
 
 2 main usages:
-- allocating arrays that are potentially bigger than the RAM+swap size, and which are backed by a temporary file
-- opening existing files or creating new files (still potentially bigger than the RAM+swap size), and mapping them to an array
+- allocating arrays that are potentially bigger than the RAM+swap size, and which are backed 
+  by a temporary file
+- opening existing files or creating new files (still potentially bigger than the RAM+swap size), 
+  and mapping them to an array
 
-Private mapping is possible, with optional write-back of the modifications to the file. Such mapping can be useful when one doesn't want to modify the file on disk, or when one wants to work only in memory and decide when to update (or not) the file. 
+Private mapping is possible, with optional write-back of the modifications to the file. 
+Such mapping can be useful when one doesn't want to modify the file on disk, or when one wants 
+to work only in memory and decide when to update (or not) the file. 
 
-Anonmymous mapping is also possible, i.e. allocating virtual memory without a physical backing file. This is actually what the C malloc() generally does (and therefore also what the Fortran allocate() does) when the allocated size is above some threshold. This option is provided to easily switch between on-disk and in-memory only modes by just changing an argument in the calls. 
+Anonmymous mapping is also possible, i.e. allocating virtual memory without a physical backing file. 
+This is actually what the C malloc() generally does (and therefore also what the Fortran allocate() does) 
+when the allocated size is above some threshold. This option is provided to easily switch 
+between on-disk and in-memory only modes by just changing an argument in the calls. 
 
 ## Usage
 
-The interface manipulates either bytes or array elements and returns a C pointer, which the user has to convert to a Fortran pointer. 
-
-The programmer can either manage themselves the conversion between elements and bytes 
-(the module provides a utility functions to get the size in bytes of a scaler of any type), 
-or provide the mapping routine an optional `mold=` argument with a variable of the same 
-type+kind as the array that will receive the mapping. e.g. these 2 codes are equivalent:
+The user creates a mapping by basically telling that he wants `n` elements of an given type/kind. 
+The type/kind is defined through a `mold=` parameter. Then they can associate a Fortran pointer to
+the mapping. C interoperabilty is required, as C is used beyond the scene). See: 
 ```fortran
+use iso_fortran_env
+use iso_C_binding
 type(fmmap_t) :: x
-real(real64), pointer :: a(:)
-integer(c_size_t) :: n = 10**9, nbytes
+real(kind=real64), pointer :: a(:)
+integer(c_size_t) :: n = 10**9
 
-if (approach_1) then
-    ! legacy approach
-	nbytes = n * fmmap_sizeof( a ) 
-	call x%create( FMMAP_SCRATCH, "", nbytes )
-else if (approach_2) then
-    ! prefered approach
-	call x%create( FMMAP_SCRATCH, "", n, mold=1.0_real64 )
-end if
-call c_f_pointer( x%cptr(), [n] )
+call x%create( FMMAP_SCRATCH, "", n, mold=a )
+call c_f_pointer( x%cptr(), a, [n] )
 ```
 
 ### Example 1
@@ -52,16 +52,13 @@ end type
 type(sometype), pointer :: pt(:)
 type(fmmap_t) :: x
 
-integer(cst) :: n, length
+integer(cst) :: n,
 ...
 ...
 n = 10_cst ** 9   !! can be larger than RAM+swap space
 
-!> converts n elements to a number of bytes
-length = n * fmmap_sizeof( pt ) 
-
 !> creates a mapping to a temporary file
-call fmmap_create(x, FMMAP_SCRATCH, "", length)
+call fmmap_create(x, FMMAP_SCRATCH, "", n, mold=pt)
 
 !> conversion to a Fortran pointer
 call c_f_pointer(x%cptr(), pt, [n])       

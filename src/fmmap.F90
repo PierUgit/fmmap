@@ -42,11 +42,11 @@ implicit none
       type(fmmap_s), allocatable :: cx
    contains
       private
-      procedure         :: create_elts  => fmmap_t_create_elts
+      procedure         :: create_elts  => fmmap_t_create
       procedure         :: create_bytes => fmmap_t_create_bytes
       generic,   public :: create  => create_elts, create_bytes
       procedure, public :: cptr    => fmmap_t_get_cptr
-      procedure         :: length_elts  => fmmap_t_get_length_elts
+      procedure         :: length_elts  => fmmap_t_get_length
       procedure         :: length_bytes => fmmap_t_get_length_bytes
       generic,   public :: length  => length_elts, length_bytes
       procedure, public :: destroy => fmmap_t_destroy
@@ -144,7 +144,7 @@ contains
 
 
    !********************************************************************************************
-   subroutine fmmap_t_create_elts(x,filestatus,filename,length,mold,private,stat)
+   subroutine fmmap_t_create(x,filestatus,filename,length,mold,private,stat)
    !********************************************************************************************
    !! Opens a file and creates a "generic" mapping to a C pointer.
    !! The whole file is mapped.
@@ -200,12 +200,14 @@ contains
    call fmmap_t_create_bytes(x,filestatus,filename,length___,private,stat)
    if (filestatus == FMMAP_OLD) length = length___ * bitsperbyte / storage_size(mold)
 
-   end subroutine fmmap_t_create_elts
+   end subroutine fmmap_t_create
 
 
    !********************************************************************************************
    subroutine fmmap_t_create_bytes(x,filestatus,filename,length,private,stat)
    !********************************************************************************************
+   !! DEPRECATED : always use fmmap_t_create()
+   !!
    !! Opens a file and creates a "generic" mapping to a C pointer.
    !! The whole file is mapped.
    !********************************************************************************************
@@ -353,7 +355,7 @@ contains
 
 
    !********************************************************************************************
-   function fmmap_t_get_length_elts(x,mold) result(length)
+   function fmmap_t_get_length(x,mold) result(length)
    !********************************************************************************************
    !! Returns the length of a mapped file
    !********************************************************************************************
@@ -372,12 +374,14 @@ contains
    
    length = 0
    if (allocated(x% cx)) length = x% cx % n * storage_size(mold) / bitsperbyte
-   end function fmmap_t_get_length_elts
+   end function fmmap_t_get_length
 
 
    !********************************************************************************************
    function fmmap_t_get_length_bytes(x) result(length)
    !********************************************************************************************
+   !! DEPRECATED : always use fmmap_t_get_length()
+   !!
    !! Returns the length in bytes of a mapped file
    !********************************************************************************************
    class(fmmap_t), intent(in)            :: x

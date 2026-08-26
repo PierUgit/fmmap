@@ -38,6 +38,7 @@ end if
 print*
 print*, "Testing FMMAP_SCRATCH large:"
 
+! testing the deprecated approach, as it still has to work
 n3 = length / fmmap_sizeof( pr )
 print*,  length/2**30, " GiBytes"
 call x% create( FMMAP_SCRATCH, dir, length )
