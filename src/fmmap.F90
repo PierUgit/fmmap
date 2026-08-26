@@ -42,13 +42,11 @@ implicit none
       type(fmmap_s), allocatable :: cx
    contains
       private
-      procedure         :: create_elts  => fmmap_t_create
-      procedure         :: create_bytes => fmmap_t_create_bytes
-      procedure         :: length_elts  => fmmap_t_get_length
-      procedure         :: length_bytes => fmmap_t_get_length_bytes
-      generic,   public :: create  => create_elts, create_bytes
+      procedure         :: fmmap_t_create,     fmmap_t_create_bytes
+      procedure         :: fmmap_t_get_length, fmmap_t_get_length_bytes
+      generic,   public :: create  => fmmap_t_create, fmmap_t_create_bytes
       procedure, public :: cptr    => fmmap_t_get_cptr
-      generic,   public :: length  => length_elts, length_bytes
+      generic,   public :: length  => fmmap_t_get_length, fmmap_t_get_length_bytes
       procedure, public :: destroy => fmmap_t_destroy
       final             ::            fmmap_t_final
    end type
