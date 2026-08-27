@@ -4,7 +4,7 @@ See also the ["detailed" documentation](doc/index.md)
 
 ## Introduction
 
-These routines provide *some* of the features of the **posix* or **Windows** memory mapped files under 
+These routines provide *some* of the features of the **posix** or **Windows** memory mapped files under 
 a simple and unique Fortran interface.
 
 2 main usages:
