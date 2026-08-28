@@ -25,10 +25,10 @@ between on-disk and in-memory only modes by just changing an argument in the cal
 ## Usage
 
 The user creates a mapping by basically telling that he wants `n` elements of an given type/kind. 
-The type/kind is defined through a `mold=` parameter. Then they can associate a Fortran pointer to
-the mapping. This requires 2 simple lines: 
+The type+kind is defined through a `mold=` parameter. Then they can associate a Fortran pointer to
+the mapping. This is as simple as:
 ```fortran
-use iso_C_binding   ! Required, as C is used behind the scene
+use iso_C_binding
 type(fmmap_t) :: x
 real, pointer :: a(:)
 integer(c_size_t) :: n = 10**9
@@ -36,6 +36,12 @@ integer(c_size_t) :: n = 10**9
 call x%create( FMMAP_SCRATCH, "", n, mold=a )   ! creates the mapping to a temporary file
 call c_f_pointer( x%cptr(), a, [n] )            ! associates a pointer to the mapping
 ```
+
+- C interoperability (iso_C_binding) is required, as C is used behind the scene. 
+- Only the type+kind of the `mold=` argument matters; it can be a literal constant or a
+  variable, a scalar or an array of any rank and size, it is just used to determine the 
+  size in memory of an elements of that type+kind
+
 
 ### Example 1 - mapping a scratch file to an array of a user derived-type
 
@@ -81,9 +87,9 @@ integer(cst) :: n
 n = 1000_cst   !! can be larger than RAM+swap space
 
 !> Mapping to a new named file for n*n integer elements
-call x%create( FMMAP_NEW, "./foo1.bin", n*n, mold=pi ) 
+call x%create( FMMAP_NEW, "./foo1.bin", n*n, mold=0 ) 
 
-!> conversion to a Fortran pointer, in 2 stages because we want a lower bound /= 1
+!> conversion to a 2D Fortran pointer, in 2 stages because we want a lower bound /= 1
 call c_f_pointer(x%cptr(), tmpi, [n,n])      
 pi(0:n-1,1:n) => tmpi
                     
@@ -130,25 +136,33 @@ The repository has an fpm (Fortran Package Manager) structure:
 ```
 fpm test
 ```
-On Windows, the presence of the `_WIN32` macro is assumed
+On Windows, the presence of the `_WIN32` macro is required
 
 ### Tested on
 macOS 26   /   gcc-gfortran 16  
 Windows 11 MSYS2   /   gcc-gfortran 13  
 Linux Debian 11   /   Intel icc-ifort 2021  
-(up to v0.11.3: Lubuntu 22.04   /   gcc-gfortran 11)
+Lubuntu 22.04   /   gcc-gfortran 11   (up to v0.11.3)
+
+It has been used in production on Linux.
 
 ### Known compilation issues
 
-Under Windows MSYS2 the `_WIN32` macro is not defined in gfortran (while it is in gcc). I don't know how it is under environments others than MSYS2. The fix is to pass it explicitly: `fpm test --flag "-D_WIN32"`
+Under Windows MSYS2 the `_WIN32` macro is not defined in gfortran (while it is in gcc). 
+I don't know how it is under environments others than MSYS2. The fix is to pass it 
+explicitly: `fpm test --flag "-D_WIN32"`
 
 ## Limitations
 
 - It is assumed that the Fortran file storage unit is a byte. This is checked in the routines.
 - The whole file is mapped, it's not possible to map only a portion of it
 - The access is always read+write, there's no option to restrict it
-- The file is always opened with non-blocking access (i.e. it can be opened again by the same process or another process), which corresponds to the usual behavior on posix systems but not Windows. 
-- Mapping to an array of a derived type containing allocatable or pointer components is not allowed (well, it's technically possible, but the memory allocated by these components won't be part of the mapping).
+- The file is always opened with non-blocking access (i.e. it can be opened again by the 
+  same process or another process), which corresponds to the usual behavior on posix systems 
+  but not Windows. 
+- Mapping to an array of a derived type containing allocatable or pointer components is 
+  not allowed (well, it's technically possible, but the memory allocated by these components 
+  won't be part of the mapping).
 
 ## Known issues
 

@@ -51,8 +51,8 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
 ## public constants
 
 `FMMAP_SCRATCH` : mapping of a temporary file which is deleted once the mapping is closed  
-`FMMAP_NEW`     : mapping of newly created file  
-`FMMAP_OLD`     : mapping of an existing file
+`FMMAP_NEW`     : mapping of newly created file (aborts if the file exists beforehand)
+`FMMAP_OLD`     : mapping of an existing file (aborts if the file does not exist beforehand)
 `FMMAP_NOFILE`  : mapping without a backing file (anonymous mapping)
 
 ## procedures pointed by the type-bound procedures
