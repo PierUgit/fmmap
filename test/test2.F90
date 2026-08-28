@@ -1,4 +1,4 @@
-program fmmaptest
+program test2
 use iso_c_binding, cst => c_size_t
 use fmmap
 implicit none

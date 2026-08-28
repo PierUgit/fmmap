@@ -457,9 +457,9 @@ contains
       if (length < 0) then
          error stop msgpre//"length must be >=0 with FMMAP_NOFILE"
       end if
-      if (.not.cx%private) then
-         error stop msgpre//"private must be .true. with FMMAP_NOFILE"
-      end if
+!       if (.not.cx%private) then
+!          error stop msgpre//"private must be .true. with FMMAP_NOFILE"
+!       end if
       cx%n = fmmap_e2b( length, ss )
    else if (filestatus == FMMAP_NEW) then
       if (len_trim(filename) == 0) then
