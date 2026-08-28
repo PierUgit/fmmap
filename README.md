@@ -1,6 +1,8 @@
 # fmmap 1.2.0 : memory mapped files in Fortran
 
-See also the ["detailed" documentation](doc/index.md)
+See also:
+- the ["detailed" documentation](doc/index.md)
+- the ["examples"](doc/examples.md)
 
 ## Introduction
 
@@ -35,6 +37,9 @@ integer(c_size_t) :: n = 10**9
 
 call x%create( FMMAP_SCRATCH, "", n, mold=a )   ! creates the mapping to a temporary file
 call c_f_pointer( x%cptr(), a, [n] )            ! associates a pointer to the mapping
+
+!> work on a(:) as if it was a classical array in memory
+! ...
 ```
 
 - C interoperability (iso_C_binding) is required, as C is used behind the scene. 
@@ -42,93 +47,8 @@ call c_f_pointer( x%cptr(), a, [n] )            ! associates a pointer to the ma
   variable, a scalar or an array of any rank and size, it is just used to determine the 
   size in memory of an elements of that type+kind
 
-
-### Example 1 - mapping a scratch file to an array of a user derived-type
-
-```fortran
-use iso_C_binding, cst => c_size_t
-use fmmap
-
-type sometype
-   integer :: i
-   double precision :: a
-   character(len=7) :: str
-end type
-type(sometype), pointer :: pt(:)
-type(fmmap_t) :: x
-
-integer(cst) :: n,
-
-n = 10_cst ** 9   !! can be larger than RAM+swap space
-
-!> creates a mapping to a temporary file
-call fmmap_create(x, FMMAP_SCRATCH, "", n, mold=pt)
-
-!> conversion to a Fortran pointer
-call c_f_pointer(x%cptr(), pt, [n])       
-     
-!> work on pt(:) as if it was a classical array
-! ...
-
-!> closes the mapping and deletes the file
-call fmmap_destroy(x)                  
-```
-
-### basic example 2 - maaping a newly created file to a 2D array
-
-```fortran
-use iso_C_binding, cst => c_size_t
-use fmmap
-
-integer, pointer, contiguous :: pi(:,:), tmpi(:,:)
-type(fmmap_t) :: x
-integer(cst) :: n
-...
-n = 1000_cst   !! can be larger than RAM+swap space
-
-!> Mapping to a new named file for n*n integer elements
-call x%create( FMMAP_NEW, "./foo1.bin", n*n, mold=0 ) 
-
-!> conversion to a 2D Fortran pointer, in 2 stages because we want a lower bound /= 1
-call c_f_pointer(x%cptr(), tmpi, [n,n])      
-pi(0:n-1,1:n) => tmpi
-                    
-!> work on pi(:,:) as if it was a classical array
-! ...
-
-!> closes the mapping (the file is NOT deleted)
-call x%destroy()
-```
-
-### Example 3 - Private mapping
-
-```fortran
-use iso_C_binding, cst => c_size_t
-use fmmap
-
-integer, pointer :: pi(:)
-type(fmmap_t) :: x
-integer(cst) :: n
-...
-
-!> Mapping an existing named file
-call x%create( FMMAP_OLD, "./foo1.bin", n, mold=0, private=.true.) 
-!> Conversion to a Fortran pointer
-call c_f_pointer( x%cptr(), pi, [n] )      
-                    
-!> work on pi(:) as if it was a classical array
-!> All the changes reside only in memory, the file is unmodified 
-! ...
-
-if (...) then
-    !> Closes the mapping; all the changes are lost and the original file is kept
-    call x%destroy()
-else
-    !> Alternatively, the changes are written back to the file before unmapping
-    call x%destroy( writeback=.true. )
-end if
-```
-
+More ["detailed" documentation](doc/index.md)  
+More [examples](doc/examples.md)
 
 ## Compilation
 
