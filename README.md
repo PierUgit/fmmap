@@ -35,7 +35,7 @@ type(fmmap_t) :: x
 real, pointer :: a(:)
 integer(c_size_t) :: n = 10**9
 
-call x%create( FMMAP_SCRATCH, "", n, mold=a )   ! creates the mapping to a temporary file
+call x%create( FMMAP_SCRATCH, "", n, mold=0.0 ) ! creates the mapping to a temporary file
 call c_f_pointer( x%cptr(), a, [n] )            ! associates a pointer to the mapping
 
 !> work on a(:) as if it was a classical array in memory
@@ -59,10 +59,10 @@ fpm test
 On Windows, the presence of the `_WIN32` macro is required
 
 ### Tested on
-macOS 26   /   gcc-gfortran 16  
-Windows 11 MSYS2   /   gcc-gfortran 13  
-Linux Debian 11   /   Intel icc-ifort 2021  
-Lubuntu 22.04   /   gcc-gfortran 11   (up to v0.11.3)
+macOS 26         /  gcc-gfortran 15 
+Windows 11 MSYS2 /  gcc-gfortran 13  
+Linux Debian 11  /  Intel icc-ifort 2021  
+Lubuntu 22.04    /  gcc-gfortran 11   (up to v0.11.3)
 
 It has been used in production on Linux.
 

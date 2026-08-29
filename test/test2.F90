@@ -10,7 +10,8 @@ integer(cst) :: n, n3, length
 character(len=:), allocatable :: filename
 character(len=128) :: str, dir
 
-print*, "Testing now very large allocations..."
+print*
+print*, "TEST 2 - very large allocations..."
 
 length = 16
 print*, "How much? (in GiB) (default=16)"
@@ -35,8 +36,7 @@ end if
    filename = trim(dir)//"/fun1.bin"
 #endif
 
-print*
-print*, "Testing FMMAP_SCRATCH large:"
+print*, "   Testing FMMAP_SCRATCH large"
 
 ! testing the deprecated approach, as it still has to work
 n3 = length / fmmap_sizeof( pr )
@@ -45,12 +45,11 @@ call x% create( FMMAP_SCRATCH, dir, length )
 call c_f_pointer( x%cptr(), pr, [n3] )
 pr(:) = 42d0
 if (pr(n3/2) /= 42d0) then
-   print*, "FAILED"
-   error stop
+   error stop "FAILED"
 end if
 call x% destroy()
 
-print*, "PASSED"
+print*, "TEST 2 PASSED"
 
 
 

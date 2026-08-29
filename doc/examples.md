@@ -11,29 +11,31 @@ use fmmap
 type sometype
    integer :: i
    double precision :: a
-   character(len=7) :: str
+   character(len=8) :: str
 end type
 type(sometype), pointer :: pt(:)
+type(sometype) :: t
 type(fmmap_t) :: x
 
-integer(cst) :: n,
+integer(cst) :: n = 10_cst**10   !< may make pt(:) larger than RAM+swap space
 
-n = 10_cst ** 9   !! can be larger than RAM+swap space
-
-!> creates a mapping to a temporary file
-call fmmap_create(x, FMMAP_SCRATCH, "", n, mold=pt)
+!> creates a mapping to a temporary file 
+call x%create(FMMAP_SCRATCH, "/SCRe", n, mold=t)
 
 !> conversion to a Fortran pointer
 call c_f_pointer(x%cptr(), pt, [n])       
      
 !> work on pt(:) as if it was a classical array
-! ...
+!! ..
 
 !> closes the mapping and deletes the file
-call fmmap_destroy(x)                  
-```
+call x%destroy()                 
 
-### basic example 2 - maaping a newly created file to a 2D array
+end
+```
+Execution of `./a.out`:
+
+### basic example 2 - mapping a newly created file to a 2D array
 
 ```fortran
 use iso_C_binding, cst => c_size_t
@@ -92,10 +94,10 @@ end if
 
 The two process map the same physical file. Because a physical file is involved there
 is possibly some performance hit. But as long as the size of the mapping is small or 
-moderate, the file can entirely live in the RAM cache, thus without an significant 
+moderate, the file can entirely live in the RAM cache, thus without significant 
 apparent performance penalty.
 
-processA.f90:
+Both process A and B are run here from the same code, but it could be 2 different codes:
 ```fortran
 use iso_C_binding, cst => c_size_t
 use fmmap
@@ -111,30 +113,9 @@ call x%create( FMMAP_OLD, "./foo1.bin", n, mold=0 )
 call c_f_pointer( x%cptr(), pi, [n] )      
                     
 !> work on pi(:) as if it was a classical array
-!> All the changes made here are "instantly" visible by process B 
+!> All the changes made here by process A are "instantly" visible by process B 
+!> and vice-versa
 ! ...
-```
-
-processB.f90:
-```fortran
-use iso_C_binding, cst => c_size_t
-use fmmap
-
-integer, pointer :: pi(:)
-type(fmmap_t) :: x
-integer(cst) :: n
-...
-
-!> Mapping the same existing named file
-call x%create( FMMAP_OLD, "./foo1.bin", n, mold=0 ) 
-!> Conversion to a Fortran pointer
-call c_f_pointer( x%cptr(), pi, [n] )      
-                    
-!> work on pi(:) as if it was a classical array
-!> All the changes made here are "instantly" visible by process A 
-! ...
-
-call x%destroy()
 ```
 
 ### Example 5 - Basic Inter-Process communication

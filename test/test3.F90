@@ -10,15 +10,17 @@ implicit none
 
    end interface
    
-   integer :: pid = -1
+   integer :: pid = -1, lu
    integer, parameter :: fibo(*) = [1, 2, 3, 5, 8, 13, 21]
    integer(c_size_t) :: n
    type(fmmap_t) :: x, y
    integer, pointer, contiguous :: a(:), b(:)
    
+print*
+print*, "TEST 3 - Inter Process Communication"
 #ifdef _WIN32
 
-   print*, "Test3 cannot be run on Windows, as it uses posix fork()"
+   print*, "TEST 3 cannot be run on Windows, as it uses posix fork()"
    
 #else
 
@@ -40,20 +42,24 @@ implicit none
       call x%create( FMMAP_OLD, "mappedfile", n, mold=0 )
       call c_f_pointer( x%cptr(), a, [n] )
       if (any(a(:) /=  fibo(:))) then
-         print*, "FAILED 1"
-         error stop
+         error stop "FAILED 1"
       end if
-      print*, "PASSED"
       call c_f_pointer( y%cptr(), b, [n] )
       if (any(b(:) /=  fibo(:))) then
-         print*, "FAILED 2"
-         error stop
+         error stop "FAILED 2"
       end if
-      print*, "PASSED"
    end if
    
    call x%destroy()
    call y%destroy()
+   
+   if (pid == 0) then
+      print*, "TEST 3 PASSED (parent)"
+      open(newunit=lu, file="mappedfile", status="OLD")
+      close(lu,status="DELETE")   
+   else
+      print*, "TEST 3 PASSED (child)"
+   end if
    
 #endif
    
