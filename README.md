@@ -1,4 +1,4 @@
-# fmmap 1.2.0 : memory mapped files in Fortran
+# fmmap 1.3.0 : memory mapped files in Fortran
 
 See also:
 - the ["detailed" documentation](doc/index.md)
