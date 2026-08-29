@@ -15,6 +15,8 @@ a simple and unique Fortran interface.
 - opening existing files or creating new files (still potentially bigger than the RAM+swap size), 
   and mapping them to an array
 
+It can also provide a form of inter-process communication.
+
 Private mapping is possible, with optional write-back of the modifications to the file. 
 Such mapping can be useful when one doesn't want to modify the file on disk, or when one wants 
 to work only in memory and decide when to update (or not) the file. 

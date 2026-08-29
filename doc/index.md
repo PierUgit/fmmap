@@ -6,8 +6,13 @@ Back to [README](../README.md)
 
 ### Private feature:
 
-- The mapped file can still be bigger than the RAM+swap size, however the amount of writes is limited by the RAM+swap size (to overcome this, one can close the mapping with write-back and remap the file
-- Currently, write-back means the entire file is rewritten, whatever the amount of modifications. This can be inefficient. If the underlying filesystem natively supports copy-on-write, a better strategy consists in creating a copy of the file with a system call, and mapping the copy without the private feature.
+- The mapped file can still be bigger than the RAM+swap size, however the amount of writes 
+  is limited by the RAM+swap size (to overcome this, one can close the mapping with 
+  write-back and remap the file
+- Currently, write-back means the entire file is rewritten, whatever the amount of 
+  modifications. This can be inefficient. If the underlying filesystem natively supports 
+  copy-on-write, a better strategy consists in creating a copy of the file with a system 
+  call, and mapping the copy without the private feature.
 
 ### Non blocking access
 
@@ -32,6 +37,7 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
 
 ## public kinds
 
+/
 
 ## public types
 
@@ -41,12 +47,12 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
 
 `type(fmmap_t) :: x` 
 
-| type-bound procedure           | => module procedures   |                                            |
-| ------------------------------ | ---------------------- | ------------------------------------------ |
-| `x%create()`                   | `fmmap_t_create()`     | creates a mapping                          |
-| `type(c_ptr) x%cptr()`         | `fmmap_t_get_cptr()`   | returns the C pointer of the mapping       |
-| `integer(c_size_t) x%length()` | `fmmap_t_get_length()` | returns the size of the mapping            |
-| `x%destroy()`                  | `fmmap_t_destroy()`    | destroys a mapping                         |
+| type-bound procedure       | => module procedures   |                                            |
+| -------------------------- | ---------------------- | ------------------------------------------ |
+| (S) `x%create()`           | `fmmap_t_create()`     | creates a mapping                          |
+| (F) `x%cptr()`             | `fmmap_t_get_cptr()`   | returns the C pointer of the mapping       |
+| (f) `x%length()`           | `fmmap_t_get_length()` | returns the size of the mapping            |
+| (S) `x%destroy()`          | `fmmap_t_destroy()`    | destroys a mapping                         |
 
 ## public constants
 
@@ -113,7 +119,7 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
    !!
    !! This is a type-bound procedure, which means that the invocation is actually:
    !! ```
-   !! mycptr = x%get_cptr()
+   !! mycptr = x%cptr()
    !! ```
    !********************************************************************************************
    function fmmap_t_get_cptr(x) result(cptr)
@@ -133,7 +139,7 @@ In case something goes unexpectedly wrong internally (file can't be opened, or m
    !!
    !! This is a type-bound procedure, which means that the invocation is actually:
    !! ```
-   !! mylength = x%get_length( <all arguments but x> )
+   !! mylength = x%length( <all arguments but x> )
    !! ```
    !********************************************************************************************
    function fmmap_t_get_length(x,mold) result(length)

@@ -2,6 +2,8 @@
 
 Back to [README](../README.md)
 
+These are not working examples that can be compiled, rather pieces of code for illustration.
+
 ### Example 1 - mapping a scratch file to an array of a user derived-type
 
 ```fortran
