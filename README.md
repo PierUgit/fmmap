@@ -28,7 +28,7 @@ between on-disk and in-memory only modes by just changing an argument in the cal
 
 ## Usage
 
-The user creates a mapping by basically telling that he wants `n` elements of an given type/kind. 
+The user creates a mapping by basically telling that they wants `n` elements of an given type/kind. 
 The type+kind is defined through a `mold=` parameter. Then they can associate a Fortran pointer to
 the mapping. This is as simple as:
 ```fortran

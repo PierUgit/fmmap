@@ -213,7 +213,6 @@ contains
    integer :: stat___
    logical(c_bool) :: wb
    character(*), parameter :: msgpre = "*** fmmap_destroy: "
-   character(:), allocatable :: msg
    !********************************************************************************************
 
    stat___ = 0
@@ -253,8 +252,8 @@ contains
    if (present(stat)) then
       stat = stat___
    else if (stat___ > 0) then
-      msg = msgpre//fmmap_errmsg(stat___)
-      error stop msg
+      print*, msgpre//fmmap_errmsg(stat___)
+      error stop msgpre
    end if
 
    end subroutine fmmap_t_destroy
@@ -304,10 +303,12 @@ contains
    !********************************************************************************************
    class(*), intent(in) :: object(..)   !< object of any type (unlimited polymorphic)
    integer(c_size_t) :: nbytes          !< number of bytes of a scalar of object type
+   
+   character(*), parameter :: msgpre = "*** fmmap_sizeof: "
    !********************************************************************************************
    nbytes = storage_size( object )
    if (modulo(nbytes,int(bitsperbyte,kind=c_size_t)) /= 0) then
-      error stop "*** fmmap_sizeof(): the storage size of the object is not a multiple of the number of bits per byte"
+      error stop msgpre//"the storage size of the object is not a multiple of the number of bits per byte"
    end if
    nbytes = nbytes / bitsperbyte
    end function fmmap_sizeof
@@ -323,13 +324,14 @@ contains
 
    integer :: stat
    character(*), parameter :: msgpre = "*** fmmap_final: "
-   character(:), allocatable :: msg
    !********************************************************************************************
 
    if (allocated(x% cx)) then
       call fmmap_t_destroy(x,stat=stat)
-      msg = msgpre//fmmap_errmsg(stat)
-      if (stat > 0) error stop msg
+      if (stat > 0) then
+         print*, msgpre//fmmap_errmsg(stat)
+         error stop msgpre
+      end if
    end if
 
    end subroutine fmmap_t_final
@@ -426,7 +428,6 @@ contains
    integer :: ss, lu, stat___
    character(kind=c_char,len=:), allocatable :: c_filename
    character(*), parameter :: msgpre = "*** fmmap_create_with_bytes: "
-   character(:), allocatable :: msg
    !********************************************************************************************
 
    if (file_storage_size /= bitsperbyte) then
@@ -511,8 +512,8 @@ contains
       stat = stat___
       if (stat > 0) deallocate( x% cx )
    else if (stat___ > 0) then
-      msg = msgpre//fmmap_errmsg(stat___)
-      error stop msg
+      print*, msgpre//fmmap_errmsg(stat___)
+      error stop msgpre
    end if
 
    end subroutine fmmap_t_create_bytes
