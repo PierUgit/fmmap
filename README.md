@@ -61,7 +61,7 @@ fpm test
 On Windows, the presence of the `_WIN32` macro is required
 
 ### Tested on
-macOS 26         /  gcc-gfortran 15 
+macOS 26         /  gcc-gfortran 15  
 Windows 11 MSYS2 /  gcc-gfortran 13  
 Linux Debian 11  /  Intel icc-ifort 2021  
 Lubuntu 22.04    /  gcc-gfortran 11   (up to v0.11.3)
